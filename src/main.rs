@@ -1,13 +1,20 @@
 mod ray;
+mod hitable;
+mod sphere;
 
 #[macro_use]
 extern crate slice_as_array;
 
 use crate::ray::Ray;
+use crate::hitable::{Hitable, HitRecord, HitableList};
+
 use image::{ImageBuffer, Pixel, Rgb, RgbImage};
 use itertools::izip;
 use nalgebra::Vector3;
 use rayon::prelude::*;
+use std::f32;
+use sphere::Sphere;
+
 
 fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
     let oc = ray.origin() - center;
@@ -22,18 +29,23 @@ fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
     }
 }
 
-fn color(ray: &Ray) -> Vector3<f32> {
-    let center = Vector3::new(0.0, 0.0, -1.0);
-    let t =  hit_sphere(center, 0.5, &ray);
-    if t > 0.0 {
-        // Vector3::new(1.0, 0.0, 0.0)
-        let normal = (ray.point_at_parameter(t) - center).normalize();
-        0.5 * Vector3::new(normal.x + 1.0, normal.y + 1.0, normal.z + 1.0)
+fn color(ray: &Ray, world: &HitableList) -> Vector3<f32> {
+
+    if let Some(hit_rec) = world.hit(ray, 0.0, f32::MAX) {
+        0.5 * Vector3::new(hit_rec.normal.x + 1.0, hit_rec.normal.y + 1.0, hit_rec.normal.z + 1.0)
     } else {
         let unit_direction: Vector3<f32> = ray.direction().normalize();
         let t = 0.5 * (unit_direction.y + 1.0);
         (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
     }
+
+    // let center = Vector3::new(0.0, 0.0, -1.0);
+    // let t =  hit_sphere(center, 0.5, &ray);
+    // if t > 0.0 {
+    //     // Vector3::new(1.0, 0.0, 0.0)
+    //     let normal = (ray.point_at_parameter(t) - center).normalize();
+    //     0.5 * Vector3::new(normal.x + 1.0, normal.y + 1.0, normal.z + 1.0)
+    // } 
 }
 
 fn main() {
@@ -47,6 +59,10 @@ fn main() {
     let horizontal = Vector3::new(4.0, 0.0, 0.0);
     let vertical = Vector3::new(0.0, 2.0, 0.0);
 
+    let mut world = HitableList::default();
+    world.push(Sphere{center: Vector3::new(0.0, 0.0, -1.0), radius: 0.5});
+    world.push(Sphere{center: Vector3::new(0.0, -100.5, -1.0), radius: 100.0});
+
     let image = (0..ny)
         .into_par_iter()
         .rev()
@@ -57,7 +73,7 @@ fn main() {
                     let v = (ny as f32 - y as f32) / ny as f32;
 
                     let ray = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical);
-                    color(&ray)
+                    color(&ray, &world)
                 })
                 .collect::<Vec<Vector3<f32>>>()
         })
