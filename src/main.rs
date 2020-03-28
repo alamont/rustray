@@ -9,18 +9,26 @@ use itertools::izip;
 use nalgebra::Vector3;
 use rayon::prelude::*;
 
-fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> bool {
+fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
     let oc = ray.origin() - center;
     let a = ray.direction().dot(&ray.direction());
     let b = 2.0 * oc.dot(&ray.direction());
     let c = oc.dot(&oc) - radius * radius;
     let discriminant = b * b - 4.0 * a * c;
-    return discriminant > 0.0;
+    if discriminant < 0.0 {
+        -1.0
+    } else {
+        (-b - discriminant.sqrt()) / (2.0 * a)
+    }
 }
 
 fn color(ray: &Ray) -> Vector3<f32> {
-    if hit_sphere(Vector3::new(0.0, 0.0, -1.0), 0.5, &ray) {
-        Vector3::new(1.0, 0.0, 0.0)
+    let center = Vector3::new(0.0, 0.0, -1.0);
+    let t =  hit_sphere(center, 0.5, &ray);
+    if t > 0.0 {
+        // Vector3::new(1.0, 0.0, 0.0)
+        let normal = (ray.point_at_parameter(t) - center).normalize();
+        0.5 * Vector3::new(normal.x + 1.0, normal.y + 1.0, normal.z + 1.0)
     } else {
         let unit_direction: Vector3<f32> = ray.direction().normalize();
         let t = 0.5 * (unit_direction.y + 1.0);
@@ -50,8 +58,10 @@ fn main() {
 
                     let ray = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical);
                     color(&ray)
-                }).collect::<Vec<Vector3<f32>>>()
-        }).collect::<Vec<Vec<Vector3<f32>>>>();
+                })
+                .collect::<Vec<Vector3<f32>>>()
+        })
+        .collect::<Vec<Vec<Vector3<f32>>>>();
 
     let mut imgbuf = image::ImageBuffer::new(nx, ny);
 
