@@ -1,6 +1,7 @@
 mod ray;
 mod hitable;
 mod sphere;
+mod camera;
 
 #[macro_use]
 extern crate slice_as_array;
@@ -14,6 +15,8 @@ use nalgebra::Vector3;
 use rayon::prelude::*;
 use std::f32;
 use sphere::Sphere;
+use camera::Camera;
+use rand::{thread_rng, Rng};
 
 
 fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
@@ -29,7 +32,7 @@ fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
     }
 }
 
-fn color(ray: &Ray, world: &HitableList) -> Vector3<f32> {
+fn ray_color(ray: &Ray, world: &HitableList) -> Vector3<f32> {
 
     if let Some(hit_rec) = world.hit(ray, 0.0, f32::MAX) {
         0.5 * Vector3::new(hit_rec.normal.x + 1.0, hit_rec.normal.y + 1.0, hit_rec.normal.z + 1.0)
@@ -51,33 +54,27 @@ fn color(ray: &Ray, world: &HitableList) -> Vector3<f32> {
 fn main() {
     let nx: u32 = 200;
     let ny: u32 = 100;
+    let ns = 100;
 
-    let mut imgbuf: image::RgbImage = image::ImageBuffer::new(nx, ny);
-
-    let origin = Vector3::new(0.0, 0.0, 0.0);
-    let lower_left_corner = Vector3::new(-2.0, -1.0, -1.0);
-    let horizontal = Vector3::new(4.0, 0.0, 0.0);
-    let vertical = Vector3::new(0.0, 2.0, 0.0);
+    let cam = Camera::default();
 
     let mut world = HitableList::default();
     world.push(Sphere{center: Vector3::new(0.0, 0.0, -1.0), radius: 0.5});
     world.push(Sphere{center: Vector3::new(0.0, -100.5, -1.0), radius: 100.0});
 
-    let image = (0..ny)
-        .into_par_iter()
-        .rev()
+    let image = (0..ny).into_par_iter().rev()
         .map(|y| {
-            (0..nx)
-                .map(|x| {
-                    let u = x as f32 / nx as f32;
-                    let v = (ny as f32 - y as f32) / ny as f32;
-
-                    let ray = Ray::new(origin, lower_left_corner + u * horizontal + v * vertical);
-                    color(&ray, &world)
-                })
-                .collect::<Vec<Vector3<f32>>>()
-        })
-        .collect::<Vec<Vec<Vector3<f32>>>>();
+            let mut rng = thread_rng();
+            (0..nx).map(|x| {
+                let col: Vector3<f32> = (0..ns).map(|_|{
+                    let u = (x as f32 + rng.gen::<f32>())/ nx as f32;
+                    let v = (ny as f32 - (y as f32 + rng.gen::<f32>())) / ny as f32;
+                    let ray = cam.get_ray(u, v);
+                    ray_color(&ray, &world)
+                }).sum();
+                col / (ns as f32)
+            }).collect::<Vec<Vector3<f32>>>()
+        }).collect::<Vec<Vec<Vector3<f32>>>>();
 
     let mut imgbuf = image::ImageBuffer::new(nx, ny);
 

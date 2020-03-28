@@ -18,14 +18,14 @@ impl Hitable for Sphere {
             let mut temp = (-b - (b * b - a * c).sqrt()) / a;
             if temp < t_max && temp > t_min {
                 let p = ray.point_at_parameter(temp);
-                let normal = (p - self.center) / self.radius;
-                return Some(HitRecord { t: temp, p, normal });
+                let outward_normal = (p - self.center) / self.radius;
+                return Some(HitRecord::new(temp, p, outward_normal, ray));
             }
             temp = (-b + (b * b - a * c).sqrt()) / a;
             if temp < t_max && temp > t_min {
                 let p = ray.point_at_parameter(temp);
-                let normal = (p - self.center) / self.radius;
-                return Some(HitRecord { t: temp, p, normal });
+                let outward_normal = (p - self.center) / self.radius;
+                return Some(HitRecord::new(temp, p, outward_normal, ray));
             }
         }
         None
