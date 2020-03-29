@@ -67,12 +67,12 @@ fn main() {
     world.push(Sphere{
         center: Vector3::new(1.0 ,0.0, -1.0), 
         radius: 0.5, 
-        material: Box::new(Metal{albedo: Vector3::new(0.8, 0.6, 0.2)})
+        material: Box::new(Metal{albedo: Vector3::new(0.8, 0.6, 0.2), fuzz: 1.0})
     });
     world.push(Sphere{
         center: Vector3::new(-1.0 ,0.0, -1.0), 
         radius: 0.5, 
-        material: Box::new(Metal{albedo: Vector3::new(0.8, 0.8, 0.8)})
+        material: Box::new(Metal{albedo: Vector3::new(0.8, 0.8, 0.8), fuzz: 0.3})
     });
 
     let image = (0..ny).into_par_iter().rev()
