@@ -1,36 +1,31 @@
-use crate::ray::Ray;
 use nalgebra::Vector3;
 
-pub struct HitRecord {
+use crate::ray::Ray;
+use crate::material::Material;
+
+pub struct HitRecord<'a> {
     pub t: f32,
     pub p: Vector3<f32>,
     pub normal: Vector3<f32>,
     pub front_face: bool,
+    pub material: &'a Box<dyn Material>,
 }
 
-impl HitRecord {
-    pub fn new(t: f32, p:Vector3<f32>, outward_normal: Vector3<f32>, ray: &Ray) -> HitRecord {
+impl<'a> HitRecord<'a> {
+    pub fn new(t: f32, p:Vector3<f32>, outward_normal: Vector3<f32>, ray: &Ray, material: &'a Box<dyn Material>) -> HitRecord<'a> {
         let front_face = ray.direction().dot(&outward_normal) < 0.0;
         let normal = if front_face {outward_normal} else {-outward_normal};
-        HitRecord { t, p, front_face, normal }
-        // self.t = t;
-        // self.p = p;
-        // self.front_face = ray.direction().dot(&outward_normal) < 0.0;
-        // self.normal = if self.front_face {outward_normal} else {-outward_normal};
+        HitRecord { t, p, front_face, normal, material: material }
     }
-    // fn set_face_normal(mut self, ray: &Ray, outward_normal: Vector3<f32>) {
-    //     self.front_face = ray.direction().dot(&outward_normal) < 0.0;
-    //     self.normal = if self.front_face {outward_normal} else {-outward_normal};
-    // }
 }
 
-pub trait Hitable:Sync {
+pub trait Hitable: Sync{
     fn hit(&self, ray:&Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
 }
 
 #[derive(Default)]
 pub struct HitableList {
-    list: Vec<Box<Hitable>>
+    list: Vec<Box<dyn Hitable>>
 }
 
 impl HitableList {

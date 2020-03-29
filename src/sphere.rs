@@ -1,10 +1,12 @@
 use crate::hitable::{HitRecord, Hitable};
 use crate::ray::Ray;
+use crate::material::Material;
 use nalgebra::Vector3;
 
 pub struct Sphere {
     pub center: Vector3<f32>,
     pub radius: f32,
+    pub material: Box<dyn Material>,
 }
 
 impl Hitable for Sphere {
@@ -19,13 +21,13 @@ impl Hitable for Sphere {
             if temp < t_max && temp > t_min {
                 let p = ray.point_at_parameter(temp);
                 let outward_normal = (p - self.center) / self.radius;
-                return Some(HitRecord::new(temp, p, outward_normal, ray));
+                return Some(HitRecord::new(temp, p, outward_normal, ray, &self.material));
             }
             temp = (-b + (b * b - a * c).sqrt()) / a;
             if temp < t_max && temp > t_min {
                 let p = ray.point_at_parameter(temp);
                 let outward_normal = (p - self.center) / self.radius;
-                return Some(HitRecord::new(temp, p, outward_normal, ray));
+                return Some(HitRecord::new(temp, p, outward_normal, ray, &self.material));
             }
         }
         None

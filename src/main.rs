@@ -2,12 +2,15 @@ mod ray;
 mod hitable;
 mod sphere;
 mod camera;
+mod vec;
+mod material;
 
 #[macro_use]
 extern crate slice_as_array;
 
 use crate::ray::Ray;
 use crate::hitable::{Hitable, HitRecord, HitableList};
+use crate::material::{Lambertian};
 
 use image::{ImageBuffer, Pixel, Rgb, RgbImage};
 use itertools::izip;
@@ -17,55 +20,24 @@ use std::f32;
 use sphere::Sphere;
 use camera::Camera;
 use rand::{thread_rng, Rng};
+use vec::{random_unit_vec};
 
-fn random_vec_in_unit_sphere() -> Vector3<f32> {
-    let mut rng = thread_rng();
-    let mut p;
-    loop {
-        p = Vector3::new(
-            rng.gen_range(-1.0, 1.0),
-            rng.gen_range(-1.0, 1.0),
-            rng.gen_range(-1.0, 1.0)
-        );
-        if p.magnitude_squared() < 1.0 {
-            break;
-        }
-    } 
-    p
-}
 
-fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
-    let oc = ray.origin() - center;
-    let a = ray.direction().dot(&ray.direction());
-    let b = 2.0 * oc.dot(&ray.direction());
-    let c = oc.dot(&oc) - radius * radius;
-    let discriminant = b * b - 4.0 * a * c;
-    if discriminant < 0.0 {
-        -1.0
-    } else {
-        (-b - discriminant.sqrt()) / (2.0 * a)
+fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
+
+    if depth <= 0 {
+        return Vector3::new(0.0, 0.0, 0.0)
     }
-}
 
-fn ray_color(ray: &Ray, world: &HitableList) -> Vector3<f32> {
-
-    if let Some(hit_rec) = world.hit(ray, 0.0, f32::MAX) {
-        let target = hit_rec.p + hit_rec.normal + random_vec_in_unit_sphere();
-        0.5 * ray_color(&Ray::new(hit_rec.p, target-hit_rec.p), world)
+    if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
+        let target = hit_rec.p + hit_rec.normal + random_unit_vec();
+        0.5 * ray_color(&Ray::new(hit_rec.p, target-hit_rec.p), world, depth-1)
         // 0.5 * Vector3::new(hit_rec.normal.x + 1.0, hit_rec.normal.y + 1.0, hit_rec.normal.z + 1.0)
     } else {
         let unit_direction: Vector3<f32> = ray.direction().normalize();
         let t = 0.5 * (unit_direction.y + 1.0);
         (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
     }
-
-    // let center = Vector3::new(0.0, 0.0, -1.0);
-    // let t =  hit_sphere(center, 0.5, &ray);
-    // if t > 0.0 {
-    //     // Vector3::new(1.0, 0.0, 0.0)
-    //     let normal = (ray.point_at_parameter(t) - center).normalize();
-    //     0.5 * Vector3::new(normal.x + 1.0, normal.y + 1.0, normal.z + 1.0)
-    // } 
 }
 
 
@@ -74,12 +46,21 @@ fn main() {
     let nx: u32 = 200;
     let ny: u32 = 100;
     let ns = 100;
+    let max_depth = 50;
 
     let cam = Camera::default();
 
     let mut world = HitableList::default();
-    world.push(Sphere{center: Vector3::new(0.0, 0.0, -1.0), radius: 0.5});
-    world.push(Sphere{center: Vector3::new(0.0, -100.5, -1.0), radius: 100.0});
+    world.push(Sphere{
+        center: Vector3::new(0.0, 0.0, -1.0), 
+        radius: 0.5, 
+        material: Box::new(Lambertian{albedo: Vector3::new(0.5, 0.5, 0.5)})
+    });
+    world.push(Sphere{
+        center: Vector3::new(0.0, -100.5, -1.0), 
+        radius: 100.0, 
+        material: Box::new(Lambertian{albedo: Vector3::new(0.5, 0.5, 0.5)})
+    });
 
     let image = (0..ny).into_par_iter().rev()
         .map(|y| {
@@ -89,7 +70,7 @@ fn main() {
                     let u = (x as f32 + rng.gen::<f32>())/ nx as f32;
                     let v = (ny as f32 - (y as f32 + rng.gen::<f32>())) / ny as f32;
                     let ray = cam.get_ray(u, v);
-                    ray_color(&ray, &world)
+                    ray_color(&ray, &world, max_depth)
                 }).sum();
                 col / (ns as f32)
             }).collect::<Vec<Vector3<f32>>>()
@@ -108,5 +89,5 @@ fn main() {
         }
     }
 
-    imgbuf.save("image.png").unwrap();
+    imgbuf.save("image3.png").unwrap();
 }
