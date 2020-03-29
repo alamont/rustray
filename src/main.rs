@@ -18,6 +18,21 @@ use sphere::Sphere;
 use camera::Camera;
 use rand::{thread_rng, Rng};
 
+fn random_vec_in_unit_sphere() -> Vector3<f32> {
+    let mut rng = thread_rng();
+    let mut p;
+    loop {
+        p = Vector3::new(
+            rng.gen_range(-1.0, 1.0),
+            rng.gen_range(-1.0, 1.0),
+            rng.gen_range(-1.0, 1.0)
+        );
+        if p.magnitude_squared() < 1.0 {
+            break;
+        }
+    } 
+    p
+}
 
 fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
     let oc = ray.origin() - center;
@@ -35,7 +50,9 @@ fn hit_sphere(center: Vector3<f32>, radius: f32, ray: &Ray) -> f32 {
 fn ray_color(ray: &Ray, world: &HitableList) -> Vector3<f32> {
 
     if let Some(hit_rec) = world.hit(ray, 0.0, f32::MAX) {
-        0.5 * Vector3::new(hit_rec.normal.x + 1.0, hit_rec.normal.y + 1.0, hit_rec.normal.z + 1.0)
+        let target = hit_rec.p + hit_rec.normal + random_vec_in_unit_sphere();
+        0.5 * ray_color(&Ray::new(hit_rec.p, target-hit_rec.p), world)
+        // 0.5 * Vector3::new(hit_rec.normal.x + 1.0, hit_rec.normal.y + 1.0, hit_rec.normal.z + 1.0)
     } else {
         let unit_direction: Vector3<f32> = ray.direction().normalize();
         let t = 0.5 * (unit_direction.y + 1.0);
@@ -50,6 +67,8 @@ fn ray_color(ray: &Ray, world: &HitableList) -> Vector3<f32> {
     //     0.5 * Vector3::new(normal.x + 1.0, normal.y + 1.0, normal.z + 1.0)
     // } 
 }
+
+
 
 fn main() {
     let nx: u32 = 200;
