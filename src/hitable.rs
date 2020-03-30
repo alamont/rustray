@@ -1,25 +1,27 @@
 use nalgebra::Vector3;
+use std::sync::Arc;
 
 use crate::ray::Ray;
 use crate::material::Material;
 
-pub struct HitRecord<'a> {
+
+pub struct HitRecord {
     pub t: f32,
     pub p: Vector3<f32>,
     pub normal: Vector3<f32>,
     pub front_face: bool,
-    pub material: &'a Box<dyn Material>,
+    pub material: Arc<Material>,
 }
 
-impl<'a> HitRecord<'a> {
-    pub fn new(t: f32, p:Vector3<f32>, outward_normal: Vector3<f32>, ray: &Ray, material: &'a Box<dyn Material>) -> HitRecord<'a> {
+impl HitRecord {
+    pub fn new(t: f32, p:Vector3<f32>, outward_normal: Vector3<f32>, ray: &Ray, material: Arc<Material>) -> HitRecord {
         let front_face = ray.direction().dot(&outward_normal) < 0.0;
         let normal = if front_face {outward_normal} else {-outward_normal};
         HitRecord { t, p, front_face, normal, material: material }
     }
 }
 
-pub trait Hitable: Sync{
+pub trait Hitable: Sync + Send {
     fn hit(&self, ray:&Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
 }
 

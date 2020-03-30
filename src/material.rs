@@ -3,6 +3,7 @@ use nalgebra::Vector3;
 use crate::hitable::{HitRecord};
 use crate::ray::Ray;
 use crate::vec::{random_unit_vec, random_vec_in_unit_sphere};
+
 use rand::{thread_rng, Rng};
 
 
@@ -27,7 +28,7 @@ pub fn fmin(x: f32, y: f32) -> f32 {
     (if y.is_nan() || x < y { x } else { y }) * 1.0
 }
 
-pub trait Material: Sync {
+pub trait Material: Sync + Send {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)>;
 }
 

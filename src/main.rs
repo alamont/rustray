@@ -23,6 +23,7 @@ use camera::Camera;
 use rand::{thread_rng, Rng};
 use vec::{random_unit_vec, vec, vec_zero};
 use scenes::{simple_scene, random_scene};
+use std::time::Instant;
 
 fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
 
@@ -45,10 +46,12 @@ fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
 
 
 fn main() {
+    
+    let now = Instant::now();
 
     let nx: u32 = 2000;
     let ny: u32 = 1000;
-    let ns = 100;
+    let ns = 50;
     let max_depth = 50;
     
     let lookfrom = vec(12.0, 2.0, 3.0);
@@ -104,6 +107,9 @@ fn main() {
         let new_output_image = format!("{:03}", (s.parse::<i32>().unwrap() + 1)).to_string() + ".png";
         imgbuf.save("output/".to_string() + &new_output_image).unwrap();
     }
+
+    let elapsed = now.elapsed();
+    println!("Elapsed: {:.2?}", elapsed);
 
 }
 
