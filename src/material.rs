@@ -57,12 +57,14 @@ impl Material for Metal {
 }
 
 pub struct Dielectric {
-    pub ref_idx: f32
+    pub ref_idx: f32,
+    pub reflection_color: Vector3<f32>,
+    pub refraction_color: Vector3<f32>,
 }
 
 impl Material for Dielectric {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
-        let attenuation = Vector3::new(1.0, 1.0, 1.0);
+        let attenuation: Vector3<f32>;
         let etai_over_etat = if hit.front_face {
             1.0 / self.ref_idx
         } else {
@@ -75,13 +77,16 @@ impl Material for Dielectric {
 
         let scattered = if etai_over_etat * sin_theta > 1.0 {
             let reflected = reflect(unit_direction, hit.normal);
+            attenuation = self.reflection_color;
             Ray::new(hit.p, reflected)
         } else {
             let reflect_prob = schlick(cos_theta, self.ref_idx);
             let mut rng = thread_rng();
             let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
+                attenuation = self.reflection_color;
                 reflect(unit_direction, hit.normal)
             } else {
+                attenuation = self.refraction_color;
                 refract(unit_direction, hit.normal, etai_over_etat)
             };
             Ray::new(hit.p, refracted_or_reflected)

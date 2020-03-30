@@ -4,6 +4,7 @@ mod sphere;
 mod camera;
 mod vec;
 mod material;
+mod scenes;
 
 #[macro_use]
 extern crate slice_as_array;
@@ -20,7 +21,8 @@ use std::{fs, f32};
 use sphere::Sphere;
 use camera::Camera;
 use rand::{thread_rng, Rng};
-use vec::{random_unit_vec};
+use vec::{random_unit_vec, vec, vec_zero};
+use scenes::{simple_scene, random_scene};
 
 fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
 
@@ -42,49 +44,21 @@ fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
 }
 
 
-
 fn main() {
 
-    let nx: u32 = 200;
-    let ny: u32 = 100;
+    let nx: u32 = 2000;
+    let ny: u32 = 1000;
     let ns = 100;
     let max_depth = 50;
     
-    let vup = Vector3::new(0.0, 1.0, 0.0);
-    let aspect = nx as f32 / ny as f32;
+    let lookfrom = vec(12.0, 2.0, 3.0);
+    let lookat = vec_zero();
+    let vup = vec(0.0, 1.0, 0.0);
+    let dist_to_focus = 10.0;
+    let aperture = 0.1;
 
-    let cam = Camera::new(
-        Vector3::new(-2.0, 2.0, 1.0), 
-        Vector3::new(0.0, 0.0, -1.0), 
-        vup, 30.0, aspect);
-
-    let mut world = HitableList::default();
-    world.push(Sphere{
-        center: Vector3::new(0.0, 0.0, -1.0), 
-        radius: 0.5, 
-        material: Box::new(Lambertian{albedo: Vector3::new(0.1, 0.2, 0.5)})
-    });
-    world.push(Sphere{
-        center: Vector3::new(0.0, -100.5, -1.0), 
-        radius: 100.0, 
-        material: Box::new(Lambertian{albedo: Vector3::new(0.8, 0.8, 0.0)})
-    });
-
-    world.push(Sphere{
-        center: Vector3::new(1.0 ,0.0, -1.0), 
-        radius: 0.5, 
-        material: Box::new(Metal{albedo: Vector3::new(0.8, 0.6, 0.2), fuzz: 0.0})
-    });
-    world.push(Sphere{
-        center: Vector3::new(-1.0 ,0.0, -1.0), 
-        radius: 0.5, 
-        material: Box::new(Dielectric{ref_idx: 1.5})
-    });
-    world.push(Sphere{
-        center: Vector3::new(-1.0 ,0.0, -1.0), 
-        radius: -0.45, 
-        material: Box::new(Dielectric{ref_idx: 1.5})
-    });
+    let cam = Camera::new(lookfrom, lookat, vup, 20.0, 2.0, aperture, dist_to_focus);
+    let world = random_scene();   
 
     let image = (0..ny).into_par_iter().rev()
         .map(|y| {
@@ -112,7 +86,6 @@ fn main() {
             *pixel = Rgb([image_pix_rgb[0], image_pix_rgb[1], image_pix_rgb[2]]);
         }
     }
-
 
     
     let paths = fs::read_dir("output/").unwrap();
