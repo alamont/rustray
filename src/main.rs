@@ -10,7 +10,7 @@ extern crate slice_as_array;
 
 use crate::ray::Ray;
 use crate::hitable::{Hitable, HitRecord, HitableList};
-use crate::material::{Lambertian, Metal};
+use crate::material::{Lambertian, Metal, Dielectric};
 
 use image::{ImageBuffer, Pixel, Rgb, RgbImage};
 use itertools::izip;
@@ -49,30 +49,41 @@ fn main() {
     let ny: u32 = 100;
     let ns = 100;
     let max_depth = 50;
+    
+    let vup = Vector3::new(0.0, 1.0, 0.0);
+    let aspect = nx as f32 / ny as f32;
 
-    let cam = Camera::default();
+    let cam = Camera::new(
+        Vector3::new(-2.0, 2.0, 1.0), 
+        Vector3::new(0.0, 0.0, -1.0), 
+        vup, 30.0, aspect);
 
     let mut world = HitableList::default();
     world.push(Sphere{
         center: Vector3::new(0.0, 0.0, -1.0), 
         radius: 0.5, 
-        material: Box::new(Lambertian{albedo: Vector3::new(0.7, 0.3, 0.3)})
+        material: Box::new(Lambertian{albedo: Vector3::new(0.1, 0.2, 0.5)})
     });
     world.push(Sphere{
         center: Vector3::new(0.0, -100.5, -1.0), 
         radius: 100.0, 
-        material: Box::new(Lambertian{albedo: Vector3::new(0.8, 0.8, 0.8)})
+        material: Box::new(Lambertian{albedo: Vector3::new(0.8, 0.8, 0.0)})
     });
 
     world.push(Sphere{
         center: Vector3::new(1.0 ,0.0, -1.0), 
         radius: 0.5, 
-        material: Box::new(Metal{albedo: Vector3::new(0.8, 0.6, 0.2), fuzz: 1.0})
+        material: Box::new(Metal{albedo: Vector3::new(0.8, 0.6, 0.2), fuzz: 0.0})
     });
     world.push(Sphere{
         center: Vector3::new(-1.0 ,0.0, -1.0), 
         radius: 0.5, 
-        material: Box::new(Metal{albedo: Vector3::new(0.8, 0.8, 0.8), fuzz: 0.3})
+        material: Box::new(Dielectric{ref_idx: 1.5})
+    });
+    world.push(Sphere{
+        center: Vector3::new(-1.0 ,0.0, -1.0), 
+        radius: -0.45, 
+        material: Box::new(Dielectric{ref_idx: 1.5})
     });
 
     let image = (0..ny).into_par_iter().rev()

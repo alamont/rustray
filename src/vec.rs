@@ -26,6 +26,6 @@ pub fn random_unit_vec() -> Vector3<f32>{
     Vector3::new(r*a.cos(), r*a.sin(), z)
 }
 
-pub fn reflect(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
-    v - 2.0*v.dot(&n)*n
+pub fn deg_to_rad(deg: f32) -> f32{
+    deg * f32::consts::PI / 180.0
 }
