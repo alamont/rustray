@@ -37,7 +37,7 @@ pub struct Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
+    fn scatter(&self, _: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
         let scatter_direction = hit.normal + random_unit_vec();
         let scattered = Ray::new(hit.p, scatter_direction);
         Some((scattered, self.albedo))

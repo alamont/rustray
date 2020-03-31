@@ -9,25 +9,22 @@ mod vec;
 extern crate minifb;
 extern crate slice_as_array;
 
-use crate::hitable::{HitRecord, Hitable, HitableList};
-use crate::material::{Dielectric, Lambertian, Metal};
+use crate::hitable::{Hitable, HitableList};
 use crate::ray::Ray;
 
 use camera::Camera;
 use image::{ImageBuffer, Pixel, Rgb, RgbImage};
-use itertools::izip;
 use minifb::{Key, ScaleMode, Window, WindowOptions};
 use nalgebra::Vector3;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 use scenes::{random_scene, simple_scene};
-use sphere::Sphere;
 use std::time::Instant;
 use std::{f32, fs};
 use vec::{random_unit_vec, vec, vec_zero};
 
-const WIDTH: usize = 200;
-const HEIGHT: usize = 100;
+const WIDTH: usize = 2000;
+const HEIGHT: usize = 1000;
 
 fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
     if depth <= 0 {
@@ -47,8 +44,6 @@ fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
 }
 
 fn display() -> Window {
-    let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
-
     let mut window = Window::new(
         "Test",
         WIDTH,
@@ -71,7 +66,7 @@ fn main() {
 
     let nx: u32 = WIDTH as u32;
     let ny: u32 = HEIGHT as u32;
-    let ns = 100;
+    let ns = 1000;
     let max_depth = 50;
 
     let mut window = display();
@@ -89,7 +84,9 @@ fn main() {
 
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 
-    for n in (0..ns) {
+    let mut completed_samples = 0;
+    // This incremental method is actually twice as fast as the more functional approach.
+    for n in 0..ns {
 
         image_buf = (0..ny)
             .into_par_iter()
@@ -115,7 +112,6 @@ fn main() {
         u32_buffer = image_buf
             .iter()
             .map(|sp| ((*sp / ((n+1) as f32) * 255.99) as u8))
-            // .map(|sp| (*sp as f32 * 255.99) as u8)
             .collect::<Vec<u8>>()
             .chunks(3)
             .map(|v| ((v[0] as u32) << 16) | ((v[1] as u32) << 8) | v[2] as u32)
@@ -126,8 +122,12 @@ fn main() {
             .unwrap();
 
         println!("sample: {}", n);
-    }
+        completed_samples += 1;
 
+        if !window.is_open() || window.is_key_down(Key::Escape) || window.is_key_released(Key::Escape) {
+            break;
+        }
+    }
 
     let paths = fs::read_dir("output/").unwrap();
     let mut names =
@@ -144,12 +144,9 @@ fn main() {
 
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         let offset = ((y * nx + x) * 3) as usize;
-        let r = (0.3 * x as f32) as u8;
-        let b = (0.3 * y as f32) as u8;
-
-        let r = (image_buf[offset] / ns as f32 * 255.99) as u8;
-        let g = (image_buf[offset + 1] / ns as f32 * 255.99) as u8;
-        let b = (image_buf[offset + 2] / ns as f32 * 255.99) as u8;
+        let r = (image_buf[offset] / completed_samples as f32 * 255.99) as u8;
+        let g = (image_buf[offset + 1] / completed_samples as f32 * 255.99) as u8;
+        let b = (image_buf[offset + 2] / completed_samples as f32 * 255.99) as u8;
 
         *pixel = image::Rgb([r, g, b]);
     }
@@ -157,7 +154,9 @@ fn main() {
     if let Some(name) = names.last() {
         let s: String = name.chars().take(name.len() - 4).collect();
         let new_output_image = format!("{:03}", (s.parse::<i32>().unwrap() + 1)).to_string() + ".png";
-        imgbuf.save("output/".to_string() + &new_output_image).unwrap();
+        let output_path = "output/".to_string() + &new_output_image;
+        println!("Saved image to {}", output_path);
+        imgbuf.save(output_path).unwrap();
     }
 
     let elapsed = now.elapsed();
