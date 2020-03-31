@@ -26,8 +26,8 @@ use std::time::Instant;
 use std::{f32, fs};
 use vec::{random_unit_vec, vec, vec_zero};
 
-const WIDTH: usize = 600;
-const HEIGHT: usize = 300;
+const WIDTH: usize = 200;
+const HEIGHT: usize = 100;
 
 fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
     if depth <= 0 {
@@ -71,34 +71,22 @@ fn main() {
 
     let nx: u32 = WIDTH as u32;
     let ny: u32 = HEIGHT as u32;
-    let ns = 1000;
+    let ns = 100;
     let max_depth = 50;
 
     let mut window = display();
-    // let mut imgbuf = image::ImageBuffer::new(nx, ny);
+    
     let mut u32_buffer: Vec<u32>;
     let lookfrom = vec(12.0, 2.0, 3.0);
     let lookat = vec_zero();
     let vup = vec(0.0, 1.0, 0.0);
     let dist_to_focus = 10.0;
     let aperture = 0.1;
+    let aspect = nx as f32 / ny as f32;
 
-    let cam = Camera::new(lookfrom, lookat, vup, 20.0, 2.0, aperture, dist_to_focus);
-    let world = random_scene();
+    let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
+    let world = simple_scene();
 
-    // let image = (0..ny).into_par_iter().rev()
-    //     .map(|y| {
-    //         let mut rng = thread_rng();
-    //         (0..nx).map(|x| {
-    //             let col: Vector3<f32> = (0..ns).map(|_|{
-    //                 let u = (x as f32 + rng.gen::<f32>())/ nx as f32;
-    //                 let v = (ny as f32 - (y as f32 + rng.gen::<f32>())) / ny as f32;
-    //                 let ray = cam.get_ray(u, v);
-    //                 ray_color(&ray, &world, max_depth)
-    //             }).sum();
-    //             col / (ns as f32)
-    //         }).collect::<Vec<Vector3<f32>>>()
-    //     }).collect::<Vec<Vec<Vector3<f32>>>>();
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 
     for n in (0..ns) {
@@ -141,22 +129,36 @@ fn main() {
     }
 
 
-    // let paths = fs::read_dir("output/").unwrap();
-    // let mut names =
-    // paths.filter_map(|entry| {
-    // entry.ok().and_then(|e|
-    //     e.path().file_name()
-    //     .and_then(|n| n.to_str().map(|s| String::from(s)))
-    // )
-    // }).collect::<Vec<String>>();
+    let paths = fs::read_dir("output/").unwrap();
+    let mut names =
+    paths.filter_map(|entry| {
+    entry.ok().and_then(|e|
+        e.path().file_name()
+        .and_then(|n| n.to_str().map(|s| String::from(s)))
+    )
+    }).collect::<Vec<String>>();
 
-    // names.sort();
+    names.sort();
 
-    // if let Some(name) = names.last() {
-    //     let s: String = name.chars().take(name.len() - 4).collect();
-    //     let new_output_image = format!("{:03}", (s.parse::<i32>().unwrap() + 1)).to_string() + ".png";
-    //     imgbuf.save("output/".to_string() + &new_output_image).unwrap();
-    // }
+    let mut imgbuf = image::ImageBuffer::new(nx, ny);
+
+    for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
+        let offset = ((y * nx + x) * 3) as usize;
+        let r = (0.3 * x as f32) as u8;
+        let b = (0.3 * y as f32) as u8;
+
+        let r = (image_buf[offset] / ns as f32 * 255.99) as u8;
+        let g = (image_buf[offset + 1] / ns as f32 * 255.99) as u8;
+        let b = (image_buf[offset + 2] / ns as f32 * 255.99) as u8;
+
+        *pixel = image::Rgb([r, g, b]);
+    }
+
+    if let Some(name) = names.last() {
+        let s: String = name.chars().take(name.len() - 4).collect();
+        let new_output_image = format!("{:03}", (s.parse::<i32>().unwrap() + 1)).to_string() + ".png";
+        imgbuf.save("output/".to_string() + &new_output_image).unwrap();
+    }
 
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
