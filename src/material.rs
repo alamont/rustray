@@ -1,8 +1,8 @@
 use nalgebra::Vector3;
 
-use crate::hitable::{HitRecord};
+use crate::hittable::{HitRecord};
 use crate::ray::Ray;
-use crate::vec::{random_unit_vec, random_vec_in_unit_sphere};
+use crate::vec::{random_unit_vec, random_vec_in_unit_sphere, fmin};
 
 use rand::{thread_rng, Rng};
 
@@ -22,10 +22,6 @@ pub fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     let mut r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
     r0 = r0*r0;
     r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
-}
-
-pub fn fmin(x: f32, y: f32) -> f32 {
-    (if y.is_nan() || x < y { x } else { y }) * 1.0
 }
 
 pub trait Material: Sync + Send {

@@ -1,6 +1,8 @@
-use crate::hitable::{HitRecord, Hitable};
+use crate::hittable::{HitRecord, Hittable};
 use crate::ray::Ray;
 use crate::material::Material;
+use crate::aabb::AABB;
+use crate::vec::vec;
 
 use nalgebra::Vector3;
 use std::sync::Arc;
@@ -21,7 +23,7 @@ impl Sphere {
     }
 }
 
-impl Hitable for Sphere {
+impl Hittable for Sphere {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         let oc = ray.origin() - self.center;
         let a = ray.direction().magnitude_squared();        
@@ -45,5 +47,12 @@ impl Hitable for Sphere {
             }
         }
         None
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        Some(AABB {
+            min: self.center - vec(self.radius, self.radius, self.radius),
+            max: self.center + vec(self.radius, self.radius, self.radius),
+        })
     }
 }

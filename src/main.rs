@@ -1,15 +1,18 @@
+
 mod camera;
-mod hitable;
+mod hittable;
 mod material;
 mod ray;
 mod scenes;
 mod sphere;
 mod vec;
+mod aabb;
+mod bvh;
 
 extern crate minifb;
 extern crate slice_as_array;
 
-use crate::hitable::{Hitable, HitableList};
+use crate::hittable::{Hittable, HittableList};
 use crate::ray::Ray;
 
 use camera::Camera;
@@ -18,15 +21,15 @@ use minifb::{Key, ScaleMode, Window, WindowOptions};
 use nalgebra::Vector3;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use scenes::{random_scene, simple_scene};
+use scenes::{random_scene, simple_scene, random_scene_no_bvh};
 use std::time::Instant;
 use std::{f32, fs};
 use vec::{random_unit_vec, vec, vec_zero};
 
-const WIDTH: usize = 2000;
-const HEIGHT: usize = 1000;
+const WIDTH: usize = 600;
+const HEIGHT: usize = 300;
 
-fn ray_color(ray: &Ray, world: &HitableList, depth: u32) -> Vector3<f32> {
+fn ray_color(ray: &Ray, world: &HittableList, depth: u32) -> Vector3<f32> {
     if depth <= 0 {
         return Vector3::new(0.0, 0.0, 0.0);
     }
@@ -62,11 +65,10 @@ fn display() -> Window {
 }
 
 fn main() {
-    let now = Instant::now();
 
     let nx: u32 = WIDTH as u32;
     let ny: u32 = HEIGHT as u32;
-    let ns = 1000;
+    let ns = 10;
     let max_depth = 50;
 
     let mut window = display();
@@ -80,11 +82,14 @@ fn main() {
     let aspect = nx as f32 / ny as f32;
 
     let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
-    let world = simple_scene();
+    let world = random_scene_no_bvh();
 
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 
     let mut completed_samples = 0;
+
+    let now = Instant::now();
+
     // This incremental method is actually twice as fast as the more functional approach.
     for n in 0..ns {
 

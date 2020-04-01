@@ -71,3 +71,11 @@ pub fn random_vec_range(a: f32, b: f32) -> Vector3<f32> {
         rng.gen_range(a, b)
     )
 }
+
+pub fn fmin(x: f32, y: f32) -> f32 {
+    (if y.is_nan() || x < y { x } else { y }) * 1.0
+}
+
+pub fn fmax(x: f32, y: f32) -> f32 {
+    (if y.is_nan() || x > y { x } else { y }) * 1.0
+}
