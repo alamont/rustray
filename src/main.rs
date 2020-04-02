@@ -29,7 +29,7 @@ use vec::{random_unit_vec, vec, vec_zero};
 const WIDTH: usize = 600;
 const HEIGHT: usize = 300;
 
-fn ray_color(ray: &Ray, world: &HittableList, depth: u32) -> Vector3<f32> {
+fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, depth: u32) -> Vector3<f32> {
     if depth <= 0 {
         return Vector3::new(0.0, 0.0, 0.0);
     }
@@ -82,7 +82,7 @@ fn main() {
     let aspect = nx as f32 / ny as f32;
 
     let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
-    let world = random_scene_no_bvh();
+    let world = random_scene();
 
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 

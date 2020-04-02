@@ -20,8 +20,8 @@ impl AABB {
 
         let t_small = t0.zip_map(&t1, |a, b| a.min(b));
         let t_big = t0.zip_map(&t1, |a, b| a.max(b));
-        
-        t_small.max() <= t_big.min()
+
+        t_min.max(t_small.max()) < t_max.min(t_big.min())        
     }
 
     pub fn zero() -> Self {

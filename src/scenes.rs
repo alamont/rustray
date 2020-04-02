@@ -47,39 +47,40 @@ pub fn simple_scene() -> HittableList {
     world
 }
 
-pub fn random_scene() -> HittableList {
-    let mut world = HittableList::default();
+pub fn random_scene() -> Box<dyn Hittable> {
+    // let mut world = HittableList::default();
     let mut rng = thread_rng();
 
-    world.push(Sphere{
+    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
+
+    objects.push(Box::new(Sphere{
         center: vec(0.0, -1000.0, 0.0),
         radius: 1000.0,
         material: Arc::new(Lambertian {
             albedo: vec(0.5, 0.5, 0.5),
         }),
-    });
+    }));
 
-    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
 
-    for a in -41..41 {
-        for b in -41..41 {
+    for a in -21..21 {
+        for b in -21..21 {
             let choose_mat = rng.gen::<f32>();
-            let center = Vector3::new(a as f32 + 0.5 * rng.gen::<f32>(), 0.2, b as f32 + 0.5 * rng.gen::<f32>());
+            let center = Vector3::new(a as f32 / 2.0 + 0.9 * rng.gen::<f32>(), 0.2, b as f32 / 2.0 + 0.9 * rng.gen::<f32>());
             if choose_mat < 0.8 {
                 // diffuse
                 let albedo = random_vec().component_mul(&random_vec());
-                world.push(Sphere{
+                objects.push(Box::new(Sphere{
                     center, 
                     radius: 0.2, 
-                    material: Arc::new(Lambertian{albedo})});
+                    material: Arc::new(Lambertian{albedo})}));
             } else if choose_mat < 0.95 {
                 // metal
                 let albedo = random_vec_range(0.5, 1.0);
                 let fuzz = rng.gen_range(0.0, 0.5);
-                world.push(Sphere{
+                objects.push(Box::new(Sphere{
                     center, 
                     radius: 0.2, 
-                    material: Arc::new(Metal{albedo, fuzz})})
+                    material: Arc::new(Metal{albedo, fuzz})}));
             } else {
                 // glass
                 let hsl_color = HSL {h: rng.gen_range(0.0, 360.0), s: 1.0, l: 0.95};
@@ -123,12 +124,11 @@ pub fn random_scene() -> HittableList {
         })
     }));
 
-    world.push_without_box(BVHNode::build(objects));
-
-    world
+ 
+   BVHNode::build(objects, 0)
 }
 
-pub fn random_scene_no_bvh() -> HittableList {
+pub fn random_scene_no_bvh() -> Box<dyn Hittable> {
     let mut world = HittableList::default();
     let mut rng = thread_rng();
 
@@ -141,10 +141,10 @@ pub fn random_scene_no_bvh() -> HittableList {
     });
 
 
-    for a in -41..41 {
-        for b in -41..41 {
+    for a in -21..21 {
+        for b in -21..21 {
             let choose_mat = rng.gen::<f32>();
-            let center = Vector3::new(a as f32 + 0.5 * rng.gen::<f32>(), 0.2, b as f32 + 0.5 * rng.gen::<f32>());
+            let center = Vector3::new(a as f32 / 2.0 + 0.9 * rng.gen::<f32>(), 0.2, b as f32 / 2.0 + 0.9 * rng.gen::<f32>());
             if choose_mat < 0.8 {
                 // diffuse
                 let albedo = random_vec().component_mul(&random_vec());
@@ -203,5 +203,5 @@ pub fn random_scene_no_bvh() -> HittableList {
         })
     });
 
-    world
+    Box::new(world)
 }
