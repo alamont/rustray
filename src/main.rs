@@ -9,19 +9,15 @@ mod vec;
 mod aabb;
 mod bvh;
 
-extern crate minifb;
-extern crate slice_as_array;
-
-use crate::hittable::{Hittable, HittableList};
-use crate::ray::Ray;
-
+use hittable::{Hittable, HittableList};
+use ray::Ray;
 use camera::Camera;
 use image::{ImageBuffer, Pixel, Rgb, RgbImage};
 use minifb::{Key, ScaleMode, Window, WindowOptions};
 use nalgebra::Vector3;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use scenes::{random_scene, simple_scene, random_scene_no_bvh};
+use scenes::{random_scene_bvh::random_scene_bvh};
 use std::time::Instant;
 use std::{f32, fs};
 use vec::{random_unit_vec, vec, vec_zero};
@@ -68,7 +64,7 @@ fn main() {
 
     let nx: u32 = WIDTH as u32;
     let ny: u32 = HEIGHT as u32;
-    let ns = 10;
+    let ns = 100;
     let max_depth = 50;
 
     let mut window = display();
@@ -82,7 +78,7 @@ fn main() {
     let aspect = nx as f32 / ny as f32;
 
     let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
-    let world = random_scene();
+    let world = random_scene_bvh();
 
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 

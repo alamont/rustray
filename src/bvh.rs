@@ -18,32 +18,6 @@ pub struct BVHNode {
 impl BVHNode {
     pub fn build(mut objects: Vec<Box<dyn Hittable>>, depth: u32) -> Box<dyn Hittable> {
         
-        // let mut rng = thread_rng();
-        // let axis: usize = rng.gen_range(0, 3);
-
-        // // let mut objects_with_bb: Vec<Box<dyn Hittable>> = objects.drain_filter(|a| a.bounding_box().is_some()).collect();
-        // let mut objects_with_bb = objects;
-
-        // objects.sort_by(|a, b| {
-        //     let left_hit = if let Some(bb) = a.bounding_box() {
-        //         bb.min
-        //     } else { vec_zero() };
-        //     let right_hit = if let Some(bb) = b.bounding_box() {
-        //         bb.min
-        //     } else { vec_zero() };
-        //     left_hit[axis].partial_cmp(&right_hit[axis]).unwrap()
-        // });
-
-        // fn sort_objects(objects: &mut Vec<Box<dyn Hittable>>, axis: usize) {
-        //     objects.sort_unstable_by(|a, b| {
-        //         let left_bb = a.bounding_box().unwrap();
-        //         let right_bb = a.bounding_box().unwrap();
-        //         let left_hit = left_bb.min[axis] + left_bb.max[axis];
-        //         let right_hit = right_bb.min[axis] + right_bb.max[axis];
-        //         left_hit.partial_cmp(&right_hit).unwrap()
-        //     });
-        // }
-
         fn axis_range(objects: &Vec<Box<dyn Hittable>>, axis: usize) -> f32 {
             let range = objects.iter().fold(f32::MAX..f32::MIN, |range, obj| {
                 let bb = obj.bounding_box().unwrap();
