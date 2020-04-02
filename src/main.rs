@@ -17,7 +17,10 @@ use minifb::{Key, ScaleMode, Window, WindowOptions};
 use nalgebra::Vector3;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use scenes::{random_scene_bvh::random_scene_bvh};
+use scenes::{
+    random_scene_bvh::random_scene_bvh,
+    random_scene::random_scene
+};
 use std::time::Instant;
 use std::{f32, fs};
 use vec::{random_unit_vec, vec, vec_zero};
@@ -78,7 +81,7 @@ fn main() {
     let aspect = nx as f32 / ny as f32;
 
     let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
-    let world = random_scene_bvh();
+    let world = random_scene();
 
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 
