@@ -2,7 +2,7 @@ use nalgebra::Vector3;
 
 use crate::hittable::{HitRecord};
 use crate::ray::Ray;
-use crate::vec::{random_unit_vec, random_vec_in_unit_sphere, fmin};
+use crate::vec::{random_unit_vec, random_vec_in_unit_sphere};
 
 use rand::{thread_rng, Rng};
 
@@ -69,7 +69,7 @@ impl Material for Dielectric {
         };
 
         let unit_direction = ray.direction().normalize();
-        let cos_theta = fmin((-unit_direction).dot(&hit.normal), 1.0);
+        let cos_theta = (-unit_direction).dot(&hit.normal).min(1.0);
         let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
 
         let scattered = if etai_over_etat * sin_theta > 1.0 {
