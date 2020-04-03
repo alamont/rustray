@@ -1,11 +1,11 @@
 use nalgebra::Vector3;
+use rand::{thread_rng, Rng};
+use std::sync::Arc;
 
 use crate::hittable::{HitRecord};
 use crate::ray::Ray;
 use crate::vec::{random_unit_vec, random_vec_in_unit_sphere};
-
-use rand::{thread_rng, Rng};
-
+use crate::texture::{ConstantTex, Texture};
 
 pub fn reflect(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
     v - 2.0*v.dot(&n)*n
@@ -29,14 +29,14 @@ pub trait Material: Sync + Send {
 }
 
 pub struct Lambertian {
-    pub albedo: Vector3<f32>,
+    pub albedo: Arc<Texture>,
 }
 
 impl Material for Lambertian {
     fn scatter(&self, _: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
         let scatter_direction = hit.normal + random_unit_vec();
         let scattered = Ray::new(hit.p, scatter_direction);
-        Some((scattered, self.albedo))
+        Some((scattered, self.albedo.value(0.0, 0.0, hit.p)))
     }
 }
 

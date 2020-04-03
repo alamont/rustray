@@ -8,6 +8,7 @@ use crate::material::{Dielectric, Lambertian, Metal};
 use crate::sphere::Sphere;
 use crate::vec::{vec, random_vec, random_vec_range};
 use crate::bvh::BVHNode;
+use crate::texture::{ConstantTex, CheckerTex};
 
 pub fn random_scene() -> Box<dyn Hittable> {
     // let mut world = HittableList::default();
@@ -15,11 +16,16 @@ pub fn random_scene() -> Box<dyn Hittable> {
 
     let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
 
+    let checker_tex = Arc::new(CheckerTex {
+        odd: Arc::new(ConstantTex { color: vec(0.2, 0.3, 0.1)}),
+        even: Arc::new(ConstantTex { color: vec(0.9, 0.9, 0.9)})
+    });    
+
     objects.push(Box::new(Sphere{
         center: vec(0.0, -1000.0, 0.0),
         radius: 1000.0,
         material: Arc::new(Lambertian {
-            albedo: vec(0.5, 0.5, 0.5),
+            albedo: checker_tex,
         }),
     }));
 
@@ -30,7 +36,7 @@ pub fn random_scene() -> Box<dyn Hittable> {
             let center = Vector3::new(a as f32 + 0.9 * rng.gen::<f32>(), 0.2, b as f32 + 0.9 * rng.gen::<f32>());
             if choose_mat < 0.8 {
                 // diffuse
-                let albedo = random_vec().component_mul(&random_vec());
+                let albedo = Arc::new(ConstantTex {color: random_vec().component_mul(&random_vec())});
                 objects.push(Box::new(Sphere{
                     center, 
                     radius: 0.2, 
@@ -74,7 +80,7 @@ pub fn random_scene() -> Box<dyn Hittable> {
         center: vec(-4.0, 1.0, 0.0),
         radius: 1.0,
         material: Arc::new(Lambertian {
-            albedo: vec(0.4, 0.2, 0.1)
+            albedo: Arc::new(ConstantTex {color: vec(0.4, 0.2, 0.1)})
         })
     }));
     objects.push(Box::new(Sphere {

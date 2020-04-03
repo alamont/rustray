@@ -8,6 +8,8 @@ use crate::material::{Dielectric, Lambertian, Metal};
 use crate::sphere::Sphere;
 use crate::vec::{vec, random_vec, random_vec_range};
 use crate::bvh::BVHNode;
+use crate::texture::{ConstantTex};
+
 
 pub fn random_scene_bvh() -> Box<dyn Hittable> {
     // let mut world = HittableList::default();
@@ -19,7 +21,7 @@ pub fn random_scene_bvh() -> Box<dyn Hittable> {
         center: vec(0.0, -1000.0, 0.0),
         radius: 1000.0,
         material: Arc::new(Lambertian {
-            albedo: vec(0.5, 0.5, 0.5),
+            albedo: Arc::new(ConstantTex {color: vec(0.5, 0.5, 0.5)}),
         }),
     }));
 
@@ -30,7 +32,7 @@ pub fn random_scene_bvh() -> Box<dyn Hittable> {
             let center = Vector3::new(a as f32 / 2.0 + 0.9 * rng.gen::<f32>(), 0.2, b as f32 / 2.0 + 0.9 * rng.gen::<f32>());
             if choose_mat < 0.8 {
                 // diffuse
-                let albedo = random_vec().component_mul(&random_vec());
+                let albedo = Arc::new(ConstantTex {color: random_vec().component_mul(&random_vec())});
                 objects.push(Box::new(Sphere{
                     center, 
                     radius: 0.2, 
@@ -74,7 +76,7 @@ pub fn random_scene_bvh() -> Box<dyn Hittable> {
         center: vec(-4.0, 1.0, 0.0),
         radius: 1.0,
         material: Arc::new(Lambertian {
-            albedo: vec(0.4, 0.2, 0.1)
+            albedo: Arc::new(ConstantTex {color: vec(0.4, 0.2, 0.1)})
         })
     }));
     objects.push(Box::new(Sphere {

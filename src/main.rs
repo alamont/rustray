@@ -8,6 +8,7 @@ mod sphere;
 mod vec;
 mod aabb;
 mod bvh;
+mod texture;
 
 use hittable::{Hittable, HittableList};
 use ray::Ray;
@@ -25,8 +26,8 @@ use std::time::Instant;
 use std::{f32, fs};
 use vec::{random_unit_vec, vec, vec_zero};
 
-const WIDTH: usize = 600;
-const HEIGHT: usize = 300;
+const WIDTH: usize = 1920;
+const HEIGHT: usize = 1080;
 
 fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, depth: u32) -> Vector3<f32> {
     if depth <= 0 {
@@ -113,9 +114,10 @@ fn main() {
             })
             .collect::<Vec<f32>>();
 
+        let pixel_scale = 1.0 / ((n+1) as f32);
         u32_buffer = image_buf
             .iter()
-            .map(|sp| ((*sp / ((n+1) as f32) * 255.99) as u8))
+            .map(|sp| ((*sp * pixel_scale).sqrt() * 255.99) as u8)
             .collect::<Vec<u8>>()
             .chunks(3)
             .map(|v| ((v[0] as u32) << 16) | ((v[1] as u32) << 8) | v[2] as u32)
@@ -145,12 +147,12 @@ fn main() {
     names.sort();
 
     let mut imgbuf = image::ImageBuffer::new(nx, ny);
-
+    let pixel_scale = 1.0 / completed_samples as f32;
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         let offset = ((y * nx + x) * 3) as usize;
-        let r = (image_buf[offset] / completed_samples as f32 * 255.99) as u8;
-        let g = (image_buf[offset + 1] / completed_samples as f32 * 255.99) as u8;
-        let b = (image_buf[offset + 2] / completed_samples as f32 * 255.99) as u8;
+        let r = ((image_buf[offset] * pixel_scale as f32).sqrt() * 255.99) as u8;
+        let g = ((image_buf[offset + 1] * pixel_scale as f32).sqrt() * 255.99) as u8;
+        let b = ((image_buf[offset + 2] * pixel_scale as f32).sqrt() * 255.99) as u8;
 
         *pixel = image::Rgb([r, g, b]);
     }
