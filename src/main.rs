@@ -19,15 +19,17 @@ use nalgebra::Vector3;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 use scenes::{
-    random_scene_bvh::random_scene_bvh,
-    random_scene::random_scene
+    // random_scene_bvh::random_scene_bvh,
+    // random_scene::random_scene,
+    dielectric_scene::dielectric_scene,
+    earth_scene::earth_scene
 };
 use std::time::Instant;
 use std::{f32, fs};
 use vec::{random_unit_vec, vec, vec_zero};
 
-const WIDTH: usize = 1920;
-const HEIGHT: usize = 1080;
+const WIDTH: usize = 600;
+const HEIGHT: usize = 300;
 
 fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, depth: u32) -> Vector3<f32> {
     if depth <= 0 {
@@ -68,21 +70,22 @@ fn main() {
 
     let nx: u32 = WIDTH as u32;
     let ny: u32 = HEIGHT as u32;
-    let ns = 100;
+    let ns = 1000;
     let max_depth = 50;
 
     let mut window = display();
     
     let mut u32_buffer: Vec<u32>;
-    let lookfrom = vec(12.0, 2.0, 3.0);
-    let lookat = vec_zero();
-    let vup = vec(0.0, 1.0, 0.0);
-    let dist_to_focus = 10.0;
-    let aperture = 0.1;
+
+    // let lookfrom = vec(12.0, 2.0, 3.0);
+    // let lookat = vec_zero();
+    // let vup = vec(0.0, 1.0, 0.0);
+    // let dist_to_focus = 10.0;
+    // let aperture = 0.1;
     let aspect = nx as f32 / ny as f32;
 
-    let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
-    let world = random_scene();
+    // let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
+    let (cam, world) = earth_scene(aspect);
 
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 

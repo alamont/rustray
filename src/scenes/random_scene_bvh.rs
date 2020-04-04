@@ -56,7 +56,8 @@ pub fn random_scene_bvh() -> Box<dyn Hittable> {
                     material: Arc::new(Dielectric { 
                         ref_idx: 1.5, 
                         reflection_color: color, 
-                        refraction_color: color }),
+                        refraction_color: color,
+                        ..Dielectric::default() }),
                     }
                 ))
             }
@@ -70,6 +71,7 @@ pub fn random_scene_bvh() -> Box<dyn Hittable> {
             ref_idx: 1.5, 
             reflection_color: vec(1.0, 1.0, 1.0),
             refraction_color: vec(1.0, 1.0, 1.0),
+            ..Dielectric::default()
         })
     }));
     objects.push(Box::new(Sphere {

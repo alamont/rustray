@@ -1,4 +1,4 @@
-use nalgebra::Vector3;
+use nalgebra::{Vector2, Vector3};
 use std::sync::Arc;
 
 use crate::aabb::{surrounding_box, AABB};
@@ -12,6 +12,7 @@ pub struct HitRecord {
     pub normal: Vector3<f32>,
     pub front_face: bool,
     pub material: Arc<dyn Material>,
+    pub uv: Vector2<f32>
 }
 
 impl HitRecord {
@@ -21,6 +22,7 @@ impl HitRecord {
         outward_normal: Vector3<f32>,
         ray: &Ray,
         material: Arc<dyn Material>,
+        uv: Vector2<f32>,
     ) -> HitRecord {
         let front_face = ray.direction().dot(&outward_normal) < 0.0;
         let normal = if front_face {
@@ -34,6 +36,7 @@ impl HitRecord {
             front_face,
             normal,
             material: material,
+            uv
         }
     }
 }

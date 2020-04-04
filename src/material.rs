@@ -6,6 +6,7 @@ use crate::hittable::{HitRecord};
 use crate::ray::Ray;
 use crate::vec::{random_unit_vec, random_vec_in_unit_sphere};
 use crate::texture::{ConstantTex, Texture};
+use crate::vec::{vec, vec_zero};
 
 pub fn reflect(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
     v - 2.0*v.dot(&n)*n
@@ -29,14 +30,14 @@ pub trait Material: Sync + Send {
 }
 
 pub struct Lambertian {
-    pub albedo: Arc<Texture>,
+    pub albedo: Arc<dyn Texture>,
 }
 
 impl Material for Lambertian {
     fn scatter(&self, _: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
         let scatter_direction = hit.normal + random_unit_vec();
         let scattered = Ray::new(hit.p, scatter_direction);
-        Some((scattered, self.albedo.value(0.0, 0.0, hit.p)))
+        Some((scattered, self.albedo.value(hit)))
     }
 }
 
@@ -55,8 +56,9 @@ impl Material for Metal {
 
 pub struct Dielectric {
     pub ref_idx: f32,
-    pub reflection_color: Vector3<f32>,
-    pub refraction_color: Vector3<f32>,
+    pub color: Vector3<f32>,
+    pub roughness: Arc<dyn Texture>,
+    pub density: f32,
 }
 
 impl Material for Dielectric {
@@ -68,27 +70,44 @@ impl Material for Dielectric {
             self.ref_idx
         };
 
+        let normal = (hit.normal + self.roughness.value(hit).x * random_vec_in_unit_sphere()).normalize();
+
         let unit_direction = ray.direction().normalize();
-        let cos_theta = (-unit_direction).dot(&hit.normal).min(1.0);
+        let cos_theta = (-unit_direction).dot(&normal).min(1.0);
         let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
 
+        if !hit.front_face {
+            let distance = (ray.origin() - hit.p).magnitude();
+            attenuation = (-self.color.map(|x| 1.0/x) * self.density * distance).map(f32::exp);
+        } else {
+            attenuation = vec(1.0, 1.0, 1.0);
+        }
+
         let scattered = if etai_over_etat * sin_theta > 1.0 {
-            let reflected = reflect(unit_direction, hit.normal);
-            attenuation = self.reflection_color;
+            let reflected = reflect(unit_direction, normal);
             Ray::new(hit.p, reflected)
         } else {
             let reflect_prob = schlick(cos_theta, self.ref_idx);
             let mut rng = thread_rng();
             let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
-                attenuation = self.reflection_color;
-                reflect(unit_direction, hit.normal)
-            } else {
-                attenuation = self.refraction_color;
-                refract(unit_direction, hit.normal, etai_over_etat)
+                reflect(unit_direction, normal)
+            } else {                                
+                refract(unit_direction, normal, etai_over_etat)
             };
             Ray::new(hit.p, refracted_or_reflected)
         };
 
         Some((scattered, attenuation))
+    }
+}
+
+impl Default for Dielectric {
+    fn default() -> Dielectric {
+        Dielectric {
+            ref_idx: 1.52,
+            color: vec(1.0, 1.0, 1.0),
+            roughness: Arc::new(ConstantTex { color: vec_zero() }),
+            density: 0.0
+        }
     }
 }
