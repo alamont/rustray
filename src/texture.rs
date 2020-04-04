@@ -5,7 +5,7 @@ use crate::hittable::HitRecord;
 
 
 pub trait Texture: Sync + Send {
-    fn value(&self, hit: &HitRecord) -> Vector3<f32>;
+    fn value(&self, uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32>;
 }
 
 pub struct ConstantTex {
@@ -13,7 +13,7 @@ pub struct ConstantTex {
 }
 
 impl Texture for ConstantTex {
-    fn value(&self, _hit: &HitRecord) -> Vector3<f32> {
+    fn value(&self, _uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32> {
         self.color
     }
 }
@@ -32,12 +32,12 @@ pub struct CheckerTex {
 }
 
 impl Texture for CheckerTex {
-    fn value(&self, hit: &HitRecord) -> Vector3<f32> {
-        let sines = (10.0 * hit.p.x / self.scale).sin() * (10.0 * hit.p.y / self.scale).sin() *  (10.0 * hit.p.z / self.scale).sin();
+    fn value(&self, uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32> {
+        let sines = (10.0 * p.x / self.scale).sin() * (10.0 * p.y / self.scale).sin() *  (10.0 * p.z / self.scale).sin();
         if sines < 0.0 {
-            self.odd.value(hit)
+            self.odd.value(uv, p)
         } else {
-            self.even.value(hit)
+            self.even.value(uv, p)
         }
     }
 }
@@ -49,12 +49,12 @@ pub struct CheckerTexMap {
 }
 
 impl Texture for CheckerTexMap {
-    fn value(&self, hit: &HitRecord) -> Vector3<f32> {
-        let sines = (10.0 * hit.uv.x / self.scale).sin() * (10.0 * hit.uv.y / self.scale).sin();
+    fn value(&self, uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32> {
+        let sines = (10.0 * uv.x / self.scale).sin() * (10.0 * uv.y / self.scale).sin();
         if sines < 0.0 {
-            self.odd.value(hit)
+            self.odd.value(uv, p)
         } else {
-            self.even.value(hit)
+            self.even.value(uv, p)
         }
     }
 }
@@ -79,8 +79,7 @@ impl ImageTexture {
 }
 
 impl Texture for ImageTexture {
-    fn value(&self, hit: &HitRecord) -> Vector3<f32> {
-        let uv = hit.uv;
+    fn value(&self, uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32> {        
         let mut i = (uv.x * self.nx as f32) as u32;
         let mut j = ((1.0 - uv.y) * self.ny as f32 - 0.001) as u32;
 

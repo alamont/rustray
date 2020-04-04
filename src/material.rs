@@ -1,6 +1,6 @@
-use nalgebra::Vector3;
+use nalgebra::{Vector2, Vector3};
 use rand::{thread_rng, Rng};
-use std::sync::Arc;
+use std::{f32, sync::Arc};
 
 use crate::hittable::{HitRecord};
 use crate::ray::Ray;
@@ -27,7 +27,7 @@ pub fn schlick(cosine: f32, ref_idx: f32) -> f32 {
 
 pub trait Material: Sync + Send {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)>;
-    fn emit(&self, ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
+    fn emitted(&self, ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
         Vector3::new(0.0, 0.0, 0.0)
     }
 }
@@ -40,7 +40,7 @@ impl Material for Lambertian {
     fn scatter(&self, _: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
         let scatter_direction = hit.normal + random_unit_vec();
         let scattered = Ray::new(hit.p, scatter_direction);
-        Some((scattered, self.albedo.value(hit)))
+        Some((scattered, self.albedo.value(hit.uv, hit.p)))
     }
 }
 
@@ -73,13 +73,14 @@ impl Material for Dielectric {
             self.ref_idx
         };
 
-        let normal = (hit.normal + self.roughness.value(hit).x * random_vec_in_unit_sphere()).normalize();
+        let normal = (hit.normal + self.roughness.value(hit.uv, hit.p).x * random_vec_in_unit_sphere()).normalize();
 
         let unit_direction = ray.direction().normalize();
         let cos_theta = (-unit_direction).dot(&normal).min(1.0);
         let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
 
         if !hit.front_face {
+            // Color
             let distance = (ray.origin() - hit.p).magnitude();
             attenuation = (-self.color.map(|x| 1.0/x) * self.density * distance).map(f32::exp);
         } else {
@@ -116,7 +117,7 @@ impl Default for Dielectric {
 }
 
 pub struct DiffuseLight {
-    emit: Arc<dyn Texture>
+    pub emit: Arc<dyn Texture>
 }
 
 impl Material for DiffuseLight {
@@ -124,8 +125,8 @@ impl Material for DiffuseLight {
         None
     }
 
-    fn emit(&self, _ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
-        self.emit.value(hit)
+    fn emitted(&self, _ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
+        self.emit.value(hit.uv, hit.p)
     }
 }
 
@@ -144,4 +145,23 @@ impl EnvironmentMaterial for SimpleEnvironment {
         let t = 0.5 * (unit_direction.y + 1.0);
         (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
     }
+}
+
+pub struct Environment {
+    pub emit: Arc<dyn Texture>
+}
+
+impl EnvironmentMaterial for Environment {
+    fn emit(&self, ray: &Ray) -> Vector3<f32> {
+        let uv = get_sphere_uv(ray.direction());
+        self.emit.value(uv, ray.direction())
+    }
+}
+
+fn get_sphere_uv(p: Vector3<f32>) -> Vector2<f32> {
+    let phi = p.z.atan2(p.x);
+    let theta = p.y.asin();
+    let u = 1.0 - (phi + f32::consts::PI) / (2.0 * f32::consts::PI);
+    let v = (theta + f32::consts::PI / 2.0) / f32::consts::PI;
+    Vector2::new(u, v)
 }

@@ -20,34 +20,38 @@ use nalgebra::Vector3;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 use scenes::{
+    Scene,
     // random_scene_bvh::random_scene_bvh,
     random_scene::random_scene,
     // dielectric_scene::dielectric_scene,
     earth_scene::earth_scene,
-    Scene
+    random_scene_light::random_scene_light
 };
 use std::time::Instant;
 use std::{f32, fs, sync::Arc};
 
-const WIDTH: usize = 1280;
-const HEIGHT: usize = 720;
+const WIDTH: usize = 600;
+const HEIGHT: usize = 300;
+
+fn clamp(x: f32, min: f32, max: f32) -> f32 {
+    if x < min { return min; }
+    if x > max { return max; } 
+    x
+}
 
 fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, environment: &Arc<dyn EnvironmentMaterial>, depth: u32) -> Vector3<f32> {
     if depth <= 0 {
         return Vector3::new(0.0, 0.0, 0.0);
     }
 
-
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
         if let Some((new_ray, attenuation)) = hit_rec.material.scatter(&ray, &hit_rec) {
             return attenuation.component_mul(&ray_color(&new_ray, world, environment, depth - 1));
         }
-        return Vector3::new(0.0, 0.0, 0.0);
+        let emitted = hit_rec.material.emitted(ray, &hit_rec);
+        return emitted;
     } else {
         environment.emit(ray)
-        // let unit_direction = ray.direction().normalize();
-        // let t = 0.5 * (unit_direction.y + 1.0);
-        // (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
     }
 }
 
@@ -88,7 +92,7 @@ fn main() {
     let aspect = nx as f32 / ny as f32;
 
     // let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
-    let scene = random_scene(aspect);
+    let scene = random_scene_light(aspect);
     let world = scene.objects;
     let environment = scene.environment;
     let cam = scene.camera;
@@ -126,7 +130,7 @@ fn main() {
         let pixel_scale = 1.0 / ((n+1) as f32);
         u32_buffer = image_buf
             .iter()
-            .map(|sp| ((*sp * pixel_scale).sqrt() * 255.99) as u8)
+            .map(|sp| clamp((*sp * pixel_scale).sqrt() * 255.99, 0.0, 255.0) as u8)
             .collect::<Vec<u8>>()
             .chunks(3)
             .map(|v| ((v[0] as u32) << 16) | ((v[1] as u32) << 8) | v[2] as u32)
@@ -159,9 +163,9 @@ fn main() {
     let pixel_scale = 1.0 / completed_samples as f32;
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         let offset = ((y * nx + x) * 3) as usize;
-        let r = ((image_buf[offset] * pixel_scale as f32).sqrt() * 255.99) as u8;
-        let g = ((image_buf[offset + 1] * pixel_scale as f32).sqrt() * 255.99) as u8;
-        let b = ((image_buf[offset + 2] * pixel_scale as f32).sqrt() * 255.99) as u8;
+        let r = clamp((image_buf[offset] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
+        let g = clamp((image_buf[offset + 1] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
+        let b = clamp((image_buf[offset + 2] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
 
         *pixel = image::Rgb([r, g, b]);
     }
