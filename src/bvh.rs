@@ -1,13 +1,9 @@
-use rand::{thread_rng, Rng};
 use std::f32;
-use std::sync::Arc;
-use std::ops::Range;
 use nalgebra::Vector3;
 
 use crate::aabb::{surrounding_box, AABB};
 use crate::hittable::{HitRecord, Hittable};
 use crate::ray::Ray;
-use crate::vec::vec_zero;
 
 pub struct BVHNode {
     left: Box<dyn Hittable>,
@@ -38,7 +34,7 @@ impl BVHNode {
         // sort_objects(&mut objects, axis as usize);
         objects.sort_unstable_by(|a, b| {
             let left_bb = a.bounding_box().unwrap();
-            let right_bb = a.bounding_box().unwrap();
+            let right_bb = b.bounding_box().unwrap();
             let left_hit = left_bb.min[axis] + left_bb.max[axis];
             let right_hit = right_bb.min[axis] + right_bb.max[axis];
             left_hit.partial_cmp(&right_hit).unwrap()

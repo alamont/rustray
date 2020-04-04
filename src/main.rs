@@ -1,4 +1,4 @@
-
+#![allow(dead_code)]
 mod camera;
 mod hittable;
 mod material;
@@ -9,42 +9,45 @@ mod vec;
 mod aabb;
 mod bvh;
 mod texture;
+mod world;
 
-use hittable::{Hittable, HittableList};
+use hittable::{Hittable};
 use ray::Ray;
-use camera::Camera;
-use image::{ImageBuffer, Pixel, Rgb, RgbImage};
+use image::{ImageBuffer};
+use material::EnvironmentMaterial;
 use minifb::{Key, ScaleMode, Window, WindowOptions};
 use nalgebra::Vector3;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 use scenes::{
     // random_scene_bvh::random_scene_bvh,
-    // random_scene::random_scene,
-    dielectric_scene::dielectric_scene,
-    earth_scene::earth_scene
+    random_scene::random_scene,
+    // dielectric_scene::dielectric_scene,
+    earth_scene::earth_scene,
+    Scene
 };
 use std::time::Instant;
-use std::{f32, fs};
-use vec::{random_unit_vec, vec, vec_zero};
+use std::{f32, fs, sync::Arc};
 
-const WIDTH: usize = 600;
-const HEIGHT: usize = 300;
+const WIDTH: usize = 1280;
+const HEIGHT: usize = 720;
 
-fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, depth: u32) -> Vector3<f32> {
+fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, environment: &Arc<dyn EnvironmentMaterial>, depth: u32) -> Vector3<f32> {
     if depth <= 0 {
         return Vector3::new(0.0, 0.0, 0.0);
     }
 
+
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
         if let Some((new_ray, attenuation)) = hit_rec.material.scatter(&ray, &hit_rec) {
-            return attenuation.component_mul(&ray_color(&new_ray, world, depth - 1));
+            return attenuation.component_mul(&ray_color(&new_ray, world, environment, depth - 1));
         }
         return Vector3::new(0.0, 0.0, 0.0);
     } else {
-        let unit_direction: Vector3<f32> = ray.direction().normalize();
-        let t = 0.5 * (unit_direction.y + 1.0);
-        (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
+        environment.emit(ray)
+        // let unit_direction = ray.direction().normalize();
+        // let t = 0.5 * (unit_direction.y + 1.0);
+        // (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
     }
 }
 
@@ -85,7 +88,10 @@ fn main() {
     let aspect = nx as f32 / ny as f32;
 
     // let cam = Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus);
-    let (cam, world) = earth_scene(aspect);
+    let scene = random_scene(aspect);
+    let world = scene.objects;
+    let environment = scene.environment;
+    let cam = scene.camera;
 
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 
@@ -105,7 +111,7 @@ fn main() {
                         let u = (x as f32 + rng.gen::<f32>()) / nx as f32;
                         let v = (ny as f32 - (y as f32 + rng.gen::<f32>())) / ny as f32;
                         let ray = cam.get_ray(u, v);
-                        let col = ray_color(&ray, &world, max_depth);
+                        let col = ray_color(&ray, &world, &environment, max_depth);
                         let offset = ((y * nx + x) * 3) as usize;
                         vec![
                             col.x + image_buf[offset],
@@ -149,7 +155,7 @@ fn main() {
 
     names.sort();
 
-    let mut imgbuf = image::ImageBuffer::new(nx, ny);
+    let mut imgbuf = ImageBuffer::new(nx, ny);
     let pixel_scale = 1.0 / completed_samples as f32;
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         let offset = ((y * nx + x) * 3) as usize;

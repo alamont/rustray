@@ -12,7 +12,6 @@ use crate::texture::{ConstantTex};
 
 
 pub fn random_scene_bvh() -> Box<dyn Hittable> {
-    // let mut world = HittableList::default();
     let mut rng = thread_rng();
 
     let mut objects: Vec<Box<dyn Hittable>> = Vec::new();

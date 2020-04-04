@@ -27,6 +27,9 @@ pub fn schlick(cosine: f32, ref_idx: f32) -> f32 {
 
 pub trait Material: Sync + Send {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)>;
+    fn emit(&self, ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
+        Vector3::new(0.0, 0.0, 0.0)
+    }
 }
 
 pub struct Lambertian {
@@ -109,5 +112,36 @@ impl Default for Dielectric {
             roughness: Arc::new(ConstantTex { color: vec_zero() }),
             density: 0.0
         }
+    }
+}
+
+pub struct DiffuseLight {
+    emit: Arc<dyn Texture>
+}
+
+impl Material for DiffuseLight {
+    fn scatter(&self, _ray: &Ray, _hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
+        None
+    }
+
+    fn emit(&self, _ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
+        self.emit.value(hit)
+    }
+}
+
+
+pub trait EnvironmentMaterial: Sync + Send {
+    fn emit(&self, ray: &Ray) -> Vector3<f32>;
+}
+
+pub struct SimpleEnvironment {
+
+}
+
+impl EnvironmentMaterial for SimpleEnvironment {
+    fn emit(&self, ray: &Ray) -> Vector3<f32> {
+        let unit_direction = ray.direction().normalize();
+        let t = 0.5 * (unit_direction.y + 1.0);
+        (1.0 - t) * Vector3::new(1.0, 1.0, 1.0) + t * Vector3::new(0.5, 0.7, 1.0)
     }
 }

@@ -4,21 +4,23 @@ use hsl::HSL;
 use std::sync::Arc;
 
 use crate::hittable::{HittableList, Hittable};
-use crate::material::{Dielectric, Lambertian, Metal};
+use crate::camera::Camera;
+use crate::material::{Dielectric, Lambertian, Metal, SimpleEnvironment};
 use crate::sphere::Sphere;
-use crate::vec::{vec, random_vec, random_vec_range};
+use crate::vec::{vec, random_vec, random_vec_range, vec_zero};
 use crate::bvh::BVHNode;
-use crate::texture::{ConstantTex, CheckerTex};
+use crate::texture::{ConstantTex, CheckerTex, ImageTexture};
+use crate::scenes::Scene;
 
-pub fn random_scene() -> Box<dyn Hittable> {
-    // let mut world = HittableList::default();
+pub fn random_scene(aspect: f32) -> Scene {
     let mut rng = thread_rng();
 
     let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
 
     let checker_tex = Arc::new(CheckerTex {
         odd: Arc::new(ConstantTex { color: vec(0.2, 0.3, 0.1)}),
-        even: Arc::new(ConstantTex { color: vec(0.9, 0.9, 0.9)})
+        even: Arc::new(ConstantTex { color: vec(0.9, 0.9, 0.9)}),
+        scale: 1.0
     });    
 
     objects.push(Box::new(Sphere{
@@ -59,8 +61,8 @@ pub fn random_scene() -> Box<dyn Hittable> {
                     radius: 0.2, 
                     material: Arc::new(Dielectric { 
                         ref_idx: 1.5, 
-                        reflection_color: color, 
-                        refraction_color: color,
+                        color,
+                        density: 0.1,
                         ..Dielectric::default() }),
                     }
                 ))
@@ -73,8 +75,8 @@ pub fn random_scene() -> Box<dyn Hittable> {
         radius: 1.0,
         material: Arc::new(Dielectric {
             ref_idx: 1.5, 
-            reflection_color: vec(1.0, 1.0, 1.0),
-            refraction_color: vec(1.0, 1.0, 1.0),
+            color: vec(1.0, 1.0, 1.0),
+            density: 0.1,
             ..Dielectric::default()
         })
     }));
@@ -93,7 +95,25 @@ pub fn random_scene() -> Box<dyn Hittable> {
             fuzz: 0.0
         })
     }));
+    objects.push(Box::new(Sphere {
+        center: Vector3::new(2.5, 0.75, 3.0),
+        radius: 0.75,
+        material: Arc::new(Lambertian {
+            albedo: Arc::new(ImageTexture::new(String::from("assets/earthmap.jpg"))),
+        }),
+    }));
 
- 
-   BVHNode::build(objects, 0)
+
+    let lookfrom = vec(12.0, 2.0, 3.0);
+    let lookat = vec_zero();
+    let vup = vec(0.0, 1.0, 0.0);
+    let dist_to_focus = 10.0;
+    let aperture = 0.1;
+
+
+    Scene {
+        camera: Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus),
+        objects: BVHNode::build(objects, 0),
+        environment: Arc::new(SimpleEnvironment {})
+    }
 }
