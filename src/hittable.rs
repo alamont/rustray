@@ -91,3 +91,29 @@ impl Hittable for HittableList {
         }
     }
 }
+
+pub struct FlipFace {
+    pub object: Box<dyn Hittable>
+}
+
+impl FlipFace {
+    pub fn new(obj: impl Hittable + 'static) -> Self {
+        Self {
+            object: Box::new(obj)
+        }
+    }
+}
+
+impl Hittable for FlipFace {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        if let Some(mut hit_rec) = self.object.hit(ray, t_min, t_max) {
+            hit_rec.front_face = !hit_rec.front_face;
+            Some(hit_rec)
+        } else {
+            None
+        }
+    }
+    fn bounding_box(&self) -> Option<AABB> {
+        self.object.bounding_box()
+    }
+}

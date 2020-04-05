@@ -11,6 +11,7 @@ mod bvh;
 mod texture;
 mod world;
 mod aarect;
+mod aabox;
 
 use cmd_lib::run_cmd;
 use hittable::{Hittable};
@@ -213,6 +214,7 @@ fn main() {
 
     if DENOISE {
         run_cmd!("Denoiser.exe -i output/hdr/{}.hdr -o output/hdr-denoised/{}.hdr", output_image_name, output_image_name);
+        run_cmd!("Denoiser.exe -i output/png/{}.png -o output/png-denoised/{}.png", output_image_name, output_image_name);
     }
 
 }

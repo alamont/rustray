@@ -111,7 +111,7 @@ impl Default for Dielectric {
             ref_idx: 1.52,
             color: vec(1.0, 1.0, 1.0),
             roughness: Arc::new(ConstantTex { color: vec_zero() }),
-            density: 0.0
+            density: 0.0 //TODO: rename to absorption coefficient or something like that
         }
     }
 }
