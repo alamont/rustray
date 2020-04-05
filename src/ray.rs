@@ -22,4 +22,8 @@ impl Ray {
     pub fn point_at_parameter(&self, t: f32) -> Vector3<f32> {
         return self.a + t * self.b;
     }
+
+    pub fn at(&self, t: f32) -> Vector3<f32> {
+        self.point_at_parameter(t)
+    }
 }

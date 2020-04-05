@@ -1,4 +1,4 @@
-use nalgebra::Vector3;
+use nalgebra::{Vector2, Vector3};
 use rand::{thread_rng, Rng};
 use std::f32;
 
@@ -46,8 +46,17 @@ pub fn deg_to_rad(deg: f32) -> f32 {
     deg * f32::consts::PI / 180.0
 }
 
+pub fn vec3(x: f32, y:f32, z:f32) -> Vector3<f32> {
+    Vector3::new(x, y, z)
+}
+
+//TODO: Refactor vec to vec3
 pub fn vec(x: f32, y:f32, z:f32) -> Vector3<f32> {
     Vector3::new(x, y, z)
+}
+
+pub fn vec2(x: f32, y:f32) -> Vector2<f32> {
+    Vector2::new(x, y)
 }
 
 pub fn vec_zero() -> Vector3<f32> {

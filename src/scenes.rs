@@ -6,6 +6,7 @@ pub mod dielectric_scene;
 pub mod earth_scene;
 pub mod random_scene;
 pub mod random_scene_light;
+pub mod cornell_box;
 
 use std::sync::Arc;
 use crate::hittable::Hittable;

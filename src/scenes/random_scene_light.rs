@@ -7,7 +7,8 @@ use crate::hittable::{HittableList, Hittable};
 use crate::camera::Camera;
 use crate::material::{Dielectric, Lambertian, Metal, Environment, DiffuseLight};
 use crate::sphere::Sphere;
-use crate::vec::{vec, random_vec, random_vec_range, vec_zero};
+use crate::aarect::{AARect, AARectType::*};
+use crate::vec::{vec, vec2, vec3, random_vec, random_vec_range, vec_zero};
 use crate::bvh::BVHNode;
 use crate::texture::{ConstantTex, CheckerTex, ImageTexture};
 use crate::scenes::Scene;
@@ -102,6 +103,18 @@ pub fn random_scene_light(aspect: f32) -> Scene {
         material: Arc::new(Lambertian {
             albedo: Arc::new(ImageTexture::new(String::from("assets/earthmap.jpg"))),
         }),
+    }));
+
+    objects.push(Box::new(AARect {
+        xy0: vec2(3.0, 1.0),
+        xy1: vec2(5.0, 3.0),
+        k: -2.0,
+        material: Arc::new(DiffuseLight { 
+            emit: Arc::new(ConstantTex {
+                color: vec(4.0, 4.0, 4.0)
+            })
+        }),
+        rect_type: XY
     }));
 
 
