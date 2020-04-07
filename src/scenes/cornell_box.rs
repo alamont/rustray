@@ -1,7 +1,7 @@
 use nalgebra::{Vector2, Vector3};
 use std::sync::Arc;
 
-use crate::hittable::{HittableList, Hittable, FlipFace};
+use crate::hittable::{HittableList, Hittable, FlipFace, Transform};
 use crate::camera::Camera;
 use crate::material::{Dielectric, Lambertian, Metal, Environment, DiffuseLight};
 use crate::aarect::{AARect, AARectType::*};
@@ -16,7 +16,7 @@ pub fn cornell_box(aspect: f32) -> Scene {
     let red = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.65, 0.05, 0.05) })});
     let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
     let green = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});
-    let light = Arc::new(DiffuseLight { emit: Arc::new(ConstantTex { color: vec3(15.0, 15.0, 15.0) })});
+    let light = Arc::new(DiffuseLight { emit: Arc::new(ConstantTex { color: vec3(14.0, 14.0, 14.0) })});
 
     let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
 
@@ -48,6 +48,13 @@ pub fn cornell_box(aspect: f32) -> Scene {
         material: light.clone(),
         rect_type: XZ
     })));
+    // objects.push(Box::new(FlipFace::new(AARect { 
+    //     xy0: vec2(113.0, 127.0), 
+    //     xy1: vec2(443.0, 442.0),
+    //     k: 554.0,
+    //     material: light.clone(),
+    //     rect_type: XZ
+    // })));
     objects.push(Box::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
@@ -63,16 +70,26 @@ pub fn cornell_box(aspect: f32) -> Scene {
         rect_type: XY
     })));
 
-    objects.push(Box::new(AABox::new(
-        vec3(130.0, 0.0, 65.0), 
-        vec3(295.0, 165.0, 230.0), 
-        white.clone()
-    )));
-    objects.push(Box::new(AABox::new(
-        vec3(265.0, 0.0, 295.0), 
-        vec3(430.0, 330.0, 460.0), 
-        white.clone()
-    )));
+    let box1 = Transform::new(
+        AABox::new(
+            vec3(165.0, 165.0, 165.0), 
+            white.clone()
+        ),
+        vec3(105.0 + 165.0/2.0, 165.0/2.0, 65.0 + 165.0/2.0),
+        vec3(0.0, -18.0, 0.0)
+    );
+    let box2 = Transform::new(
+        AABox::new(
+            vec(165.0, 330.0, 165.0),
+            white.clone()
+        ),
+        vec3(295.0 + 165.0/2.0, 330.0/2.0, 295.0 + 165.0/2.0),
+        vec3(0.0, 15.0, 0.0)
+    );
+
+    objects.push(Box::new(box1));
+    objects.push(Box::new(box2));
+
 
 
     let lookfrom = vec3(278.0, 278.0, -800.0);

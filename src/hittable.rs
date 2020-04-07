@@ -1,10 +1,10 @@
-use nalgebra::{Vector2, Vector3};
-use std::sync::Arc;
+use nalgebra::{Vector2, Vector3, Rotation3};
+use std::{sync::Arc, f32};
 
 use crate::aabb::{surrounding_box, AABB};
 use crate::material::Material;
 use crate::ray::Ray;
-use crate::vec::{vec, vec_zero};
+use crate::vec::{vec, vec_zero, deg_to_rad};
 
 pub struct HitRecord {
     pub t: f32,
@@ -38,6 +38,15 @@ impl HitRecord {
             material: material,
             uv
         }
+    }
+
+    pub fn set_face_normal(&mut self, ray: &Ray, outward_normal: Vector3<f32>) {
+        self.front_face = ray.direction().dot(&outward_normal) < 0.0;
+        self.normal = if self.front_face {
+            outward_normal
+        } else {
+            -outward_normal
+        };
     }
 }
 
@@ -115,5 +124,48 @@ impl Hittable for FlipFace {
     }
     fn bounding_box(&self) -> Option<AABB> {
         self.object.bounding_box()
+    }
+}
+
+pub struct Transform {
+    pub object: Box<dyn Hittable>,
+    pub offset: Vector3<f32>,
+    pub rotation: Vector3<f32>
+}
+
+impl Transform {
+    pub fn new(obj: impl Hittable + 'static, offset: Vector3<f32>, rotation_deg: Vector3<f32>) -> Self {
+        let rotation = rotation_deg.map(deg_to_rad);
+        Self {
+            object: Box::new(obj),
+            offset,
+            rotation
+        }
+    }
+}
+
+impl Hittable for Transform {
+    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        let rot = Rotation3::from_euler_angles(self.rotation.x, self.rotation.y, self.rotation.z);
+        let moved_ray = Ray::new(rot.inverse()* (ray.origin() - self.offset), rot.inverse() * ray.direction());
+
+        if let Some(mut hit_rec) = self.object.hit(&moved_ray, t_min, t_max) {
+            hit_rec.p = rot * hit_rec.p + self.offset;
+            hit_rec.set_face_normal(&moved_ray, rot * hit_rec.normal);            
+            Some(hit_rec)
+        } else {
+            None
+        }
+    }
+
+    fn bounding_box(&self) -> Option<AABB> {
+        if let Some(bb) = self.object.bounding_box() {
+            Some(AABB {
+                min: bb.min + self.offset,
+                max: bb.max + self.offset
+            })
+        } else {
+            None
+        }
     }
 }

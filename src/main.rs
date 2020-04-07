@@ -16,6 +16,7 @@ mod aabox;
 use cmd_lib::run_cmd;
 use hittable::{Hittable};
 use ray::Ray;
+use vec::vec_zero;
 use image::{ImageBuffer, hdr::{HDREncoder}, Rgb};
 use material::EnvironmentMaterial;
 use minifb::{Key, ScaleMode, Window, WindowOptions};
@@ -65,6 +66,26 @@ fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, environment: &Arc<dyn Environ
     }
 }
 
+fn ray_albedo(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
+    if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
+        if let Some((_new_ray, attenuation)) = hit_rec.material.scatter(&ray, &hit_rec) {
+            return attenuation;
+        } else {
+            vec_zero()
+        }
+    } else {
+        vec_zero()
+    }
+}
+
+fn ray_normal(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
+    if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
+        hit_rec.normal.normalize()
+    } else {
+        vec_zero()
+    }
+}
+
 fn display() -> Window {
     let mut window = Window::new(
         "Test",
@@ -91,27 +112,29 @@ fn main() {
     let max_depth = 50;
 
     let mut ray_count: u32 = 0;
-
-    let mut window = display();
-    
+    let mut window = display();  
     let mut u32_buffer: Vec<u32>;
+    let mut completed_samples = 0;
+    let mut save_images = false;
+
+
+    let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
+    let mut albedo_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
+    let mut normal_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
+
 
     let aspect = nx as f32 / ny as f32;
-
     let scene = cornell_box(aspect);
+
     let world = scene.objects;
     let environment = scene.environment;
     let cam = scene.camera;
 
-    let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
-
-    let mut completed_samples = 0;
-
+    
     let now = Instant::now();
 
     // This incremental method is actually twice as fast as the more functional approach.
     for n in 0..ns {
-
         image_buf = (0..ny)
             .into_par_iter()
             .flat_map(|y| {
@@ -154,8 +177,42 @@ fn main() {
         if !window.is_open() || window.is_key_down(Key::Escape) || window.is_key_released(Key::Escape) {
             break;
         }
-    }
 
+        if window.is_key_down(Key::S) || window.is_key_released(Key::S) {
+            save_images = true;
+            break;
+        }
+    }
+    
+    albedo_buf = (0..ny)
+        .into_par_iter()
+        .flat_map(|y| {
+            (0..nx)
+                .flat_map(|x| {
+                    let u = (x as f32) / nx as f32;
+                    let v = (ny as f32 - (y as f32)) / ny as f32;
+                    let ray = cam.get_ray(u, v);
+                    let col = ray_albedo(&ray, &world);
+                    vec![col.x, col.y, col.z]
+                }).collect::<Vec<f32>>()
+        }).collect::<Vec<f32>>();
+
+    normal_buf = (0..ny)
+        .into_par_iter()
+        .flat_map(|y| {
+            (0..nx)
+                .flat_map(|x| {
+                    let u = (x as f32) / nx as f32;
+                    let v = (ny as f32 - (y as f32)) / ny as f32;
+                    let ray = cam.get_ray(u, v);
+                    let col = ray_normal(&ray, &world);
+                    vec![col.x, col.y, col.z]
+                }).collect::<Vec<f32>>()
+        }).collect::<Vec<f32>>();
+
+    if completed_samples == ns {
+        save_images = true;
+    }
     
     let elapsed = now.elapsed();
     unsafe {
@@ -163,58 +220,84 @@ fn main() {
     }
 
 
+    if save_images {
+
+        let mut imgbuf = ImageBuffer::new(nx, ny);
+        let pixel_scale = 1.0 / completed_samples as f32;
+        for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
+            let offset = ((y * nx + x) * 3) as usize;
+            let r = clamp((image_buf[offset] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
+            let g = clamp((image_buf[offset + 1] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
+            let b = clamp((image_buf[offset + 2] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
+
+            *pixel = image::Rgb([r, g, b]);
+        }
 
 
-    let mut imgbuf = ImageBuffer::new(nx, ny);
-    let pixel_scale = 1.0 / completed_samples as f32;
-    for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-        let offset = ((y * nx + x) * 3) as usize;
-        let r = clamp((image_buf[offset] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
-        let g = clamp((image_buf[offset + 1] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
-        let b = clamp((image_buf[offset + 2] * pixel_scale as f32).sqrt() * 255.99, 0.0, 255.0) as u8;
+        let paths = fs::read_dir("output/png/").unwrap();
+        let mut names =
+        paths.filter_map(|entry| {
+        entry.ok().and_then(|e|
+            e.path().file_name()
+            .and_then(|n| n.to_str().map(|s| String::from(s)))
+        )
+        }).collect::<Vec<String>>();
 
-        *pixel = image::Rgb([r, g, b]);
-    }
+        names.sort();
+        let mut output_image_name = String::new();
 
-
-    let paths = fs::read_dir("output/png/").unwrap();
-    let mut names =
-    paths.filter_map(|entry| {
-    entry.ok().and_then(|e|
-        e.path().file_name()
-        .and_then(|n| n.to_str().map(|s| String::from(s)))
-    )
-    }).collect::<Vec<String>>();
-
-    names.sort();
-    let mut output_image_name = String::new();
-
-    if let Some(name) = names.last() {
-        let s: String = name.chars().take(name.len() - 4).collect();
-        output_image_name = format!("{:03}", (s.parse::<i32>().unwrap() + 1));
-        let output_path = "output/png/".to_string() + &output_image_name + ".png";
-        println!("Saved image to {}", output_path);
-        imgbuf.save(output_path).unwrap();
-    }
+        if let Some(name) = names.last() {
+            let s: String = name.chars().take(name.len() - 4).collect();
+            output_image_name = format!("{:03}", (s.parse::<i32>().unwrap() + 1));
+            let output_path = "output/png/".to_string() + &output_image_name + ".png";
+            println!("Saved image to {}", output_path);
+            imgbuf.save(output_path).unwrap();
+        }
 
 
-    if HDR_OUTPUT {
-        let image_bug_rgb = image_buf.chunks(3).map(|pix| {
-            image::Rgb([
-                pix[0] / completed_samples as f32, 
-                pix[1] / completed_samples as f32, 
-                pix[2] / completed_samples as f32])
-        }).collect::<Vec<Rgb<f32>>>();
+        if HDR_OUTPUT {
+            let image_buf_rgb = image_buf.chunks(3).map(|pix| {
+                image::Rgb([
+                    pix[0] / completed_samples as f32, 
+                    pix[1] / completed_samples as f32, 
+                    pix[2] / completed_samples as f32])
+            }).collect::<Vec<Rgb<f32>>>();
 
-        let file = fs::File::create(format!("output/hdr/{}.hdr", output_image_name)).unwrap();
-        let encoder = HDREncoder::new(io::BufWriter::new(file));
+            let file = fs::File::create(format!("output/hdr/{}.hdr", output_image_name)).unwrap();
+            let encoder = HDREncoder::new(io::BufWriter::new(file));
 
-        encoder.encode(&image_bug_rgb[..], WIDTH, HEIGHT).unwrap();
-    }
+            encoder.encode(&image_buf_rgb[..], WIDTH, HEIGHT).unwrap();
 
-    if DENOISE {
-        run_cmd!("Denoiser.exe -i output/hdr/{}.hdr -o output/hdr-denoised/{}.hdr", output_image_name, output_image_name);
-        run_cmd!("Denoiser.exe -i output/png/{}.png -o output/png-denoised/{}.png", output_image_name, output_image_name);
+            let _ = fs::remove_file("output/temp/albedo.png");
+            let _ = fs::remove_file("output/temp/normal.png");
+
+            // Albedo
+            let mut imgbuf_albedo = ImageBuffer::new(nx, ny);
+            for (x, y, pixel) in imgbuf_albedo.enumerate_pixels_mut() {
+                let offset = ((y * nx + x) * 3) as usize;
+                let r = clamp(albedo_buf[offset] * 255.99, 0.0, 255.0) as u8;
+                let g = clamp(albedo_buf[offset + 1] * 255.99, 0.0, 255.0) as u8;
+                let b = clamp(albedo_buf[offset + 2] * 255.99, 0.0, 255.0) as u8;
+                *pixel = image::Rgb([r, g, b]);
+            }
+            imgbuf_albedo.save("output/temp/albedo.png").unwrap();
+
+            //Normal
+            let mut imgbuf_normal = ImageBuffer::new(nx, ny);
+            for (x, y, pixel) in imgbuf_normal.enumerate_pixels_mut() {
+                let offset = ((y * nx + x) * 3) as usize;
+                let r = clamp((normal_buf[offset] + 1.0) / 2.0 * 255.99, 0.0, 255.0) as u8;
+                let g = clamp((normal_buf[offset + 1] + 1.0) / 2.0 * 255.99, 0.0, 255.0) as u8;
+                let b = clamp((normal_buf[offset + 2] + 1.0) / 2.0 * 255.99, 0.0, 255.0) as u8;
+                *pixel = image::Rgb([r, g, b]);
+            }
+            imgbuf_normal.save("output/temp/normal.png").unwrap();
+        }
+
+        if DENOISE {
+            let _ = run_cmd!("Denoiser.exe -i output/hdr/{}.hdr -a output/temp/albedo.png -n  output/temp/normal.png -o output/hdr-denoised/{}.hdr", output_image_name, output_image_name);
+            let _ = run_cmd!("Denoiser.exe -i output/png/{}.png -a output/temp/albedo.png -n  output/temp/normal.png -o output/png-denoised/{}.png", output_image_name, output_image_name);
+        }
     }
 
 }

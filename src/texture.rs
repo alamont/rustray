@@ -83,8 +83,8 @@ impl Texture for ImageTexture {
         let mut i = (uv.x * self.nx as f32) as u32;
         let mut j = ((1.0 - uv.y) * self.ny as f32 - 0.001) as u32;
 
-        if i < 0 {i = 0}
-        if j < 0 {j = 0}
+        // if i < 0 {i = 0}
+        // if j < 0 {j = 0}
         if i > self.nx-1 {i = self.nx-1}
         if j > self.ny-1 {j = self.ny-1}
 
