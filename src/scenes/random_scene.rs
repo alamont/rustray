@@ -45,7 +45,7 @@ pub fn random_scene(aspect: f32) -> Scene {
                     material: Arc::new(Lambertian{albedo})}));
             } else if choose_mat < 0.95 {
                 // metal
-                let albedo = random_vec_range(0.5, 1.0);
+                let albedo = Arc::new(ConstantTex {color: random_vec_range(0.5, 1.0)});
                 let fuzz = rng.gen_range(0.0, 0.5);
                 objects.push(Box::new(Sphere{
                     center, 
@@ -91,7 +91,7 @@ pub fn random_scene(aspect: f32) -> Scene {
         center: vec(4.0, 1.0, 0.0),
         radius: 1.0,
         material: Arc::new(Metal {
-            albedo: vec(0.7, 0.6, 0.5),
+            albedo:  Arc::new(ConstantTex {color: vec(0.7, 0.6, 0.5)}),
             fuzz: 0.0
         })
     }));

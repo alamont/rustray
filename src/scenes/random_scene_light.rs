@@ -46,7 +46,7 @@ pub fn random_scene_light(aspect: f32) -> Scene {
                     material: Arc::new(Lambertian{albedo})}));
             } else if choose_mat < 0.95 {
                 // metal
-                let albedo = random_vec_range(0.5, 1.0);
+                let albedo = Arc::new(ConstantTex {color: random_vec_range(0.5, 1.0)});
                 let fuzz = rng.gen_range(0.0, 0.5);
                 objects.push(Box::new(Sphere{
                     center, 

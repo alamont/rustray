@@ -17,6 +17,7 @@ pub fn cornell_box(aspect: f32) -> Scene {
     let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
     let green = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});
     let light = Arc::new(DiffuseLight { emit: Arc::new(ConstantTex { color: vec3(14.0, 14.0, 14.0) })});
+    let aluminium  = Arc::new(Metal { albedo: Arc::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
 
     let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
 
@@ -75,15 +76,23 @@ pub fn cornell_box(aspect: f32) -> Scene {
             vec3(165.0, 165.0, 165.0), 
             white.clone()
         ),
-        vec3(105.0 + 165.0/2.0, 165.0/2.0, 65.0 + 165.0/2.0),
+        vec3(115.0 + 165.0/2.0, 165.0/2.0, 65.0 + 165.0/2.0),
         vec3(0.0, -18.0, 0.0)
     );
+    // let box2 = Transform::new(
+    //     AABox::new(
+    //         vec(165.0, 330.0, 165.0),
+    //         white.clone()
+    //     ),
+    //     vec3(280.0 + 165.0/2.0, 330.0/2.0, 295.0 + 165.0/2.0),
+    //     vec3(0.0, 15.0, 0.0)
+    // );
     let box2 = Transform::new(
         AABox::new(
             vec(165.0, 330.0, 165.0),
-            white.clone()
+            aluminium.clone()
         ),
-        vec3(295.0 + 165.0/2.0, 330.0/2.0, 295.0 + 165.0/2.0),
+        vec3(280.0 + 165.0/2.0, 330.0/2.0, 295.0 + 165.0/2.0),
         vec3(0.0, 15.0, 0.0)
     );
 
