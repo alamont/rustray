@@ -12,6 +12,7 @@ mod texture;
 mod world;
 mod aarect;
 mod aabox;
+mod volume;
 
 use cmd_lib::run_cmd;
 use hittable::{Hittable};
@@ -31,6 +32,7 @@ use scenes::{
     earth_scene::earth_scene,
     random_scene_light::random_scene_light,
     cornell_box::cornell_box,
+    cornell_box_vol::cornell_box_vol,
 };
 use std::{f32, fs, sync::Arc, io, time::Instant};
 
@@ -70,20 +72,16 @@ fn ray_albedo(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
         if let Some((_new_ray, attenuation)) = hit_rec.material.scatter(&ray, &hit_rec) {
             return attenuation;
-        } else {
-            vec_zero()
         }
-    } else {
-        vec_zero()
     }
+    vec_zero()
 }
 
 fn ray_normal(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
-        hit_rec.normal.normalize()
-    } else {
-        vec_zero()
+        return hit_rec.normal.normalize();
     }
+    vec_zero()
 }
 
 fn display() -> Window {
@@ -124,7 +122,7 @@ fn main() {
 
 
     let aspect = nx as f32 / ny as f32;
-    let scene = cornell_box(aspect);
+    let scene = cornell_box_vol(aspect);
 
     let world = scene.objects;
     let environment = scene.environment;
@@ -191,7 +189,7 @@ fn main() {
                 .flat_map(|x| {
                     let u = (x as f32) / nx as f32;
                     let v = (ny as f32 - (y as f32)) / ny as f32;
-                    let ray = cam.get_ray(u, v);
+                    let ray = cam.get_ray_an(u, v);
                     let col = ray_albedo(&ray, &world);
                     vec![col.x, col.y, col.z]
                 }).collect::<Vec<f32>>()
@@ -204,7 +202,7 @@ fn main() {
                 .flat_map(|x| {
                     let u = (x as f32) / nx as f32;
                     let v = (ny as f32 - (y as f32)) / ny as f32;
-                    let ray = cam.get_ray(u, v);
+                    let ray = cam.get_ray_an(u, v);
                     let col = ray_normal(&ray, &world);
                     vec![col.x, col.y, col.z]
                 }).collect::<Vec<f32>>()
@@ -270,6 +268,7 @@ fn main() {
 
             let _ = fs::remove_file("output/temp/albedo.png");
             let _ = fs::remove_file("output/temp/normal.png");
+
 
             // Albedo
             let mut imgbuf_albedo = ImageBuffer::new(nx, ny);

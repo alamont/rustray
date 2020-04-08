@@ -147,7 +147,8 @@ impl Transform {
 impl Hittable for Transform {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         let rot = Rotation3::from_euler_angles(self.rotation.x, self.rotation.y, self.rotation.z);
-        let moved_ray = Ray::new(rot.inverse()* (ray.origin() - self.offset), rot.inverse() * ray.direction());
+        let mut moved_ray = Ray::new(rot.inverse()* (ray.origin() - self.offset), rot.inverse() * ray.direction());
+        moved_ray.albedo_normal_ray = ray.albedo_normal_ray;
 
         if let Some(mut hit_rec) = self.object.hit(&moved_ray, t_min, t_max) {
             hit_rec.p = rot * hit_rec.p + self.offset;

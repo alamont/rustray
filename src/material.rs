@@ -30,6 +30,9 @@ pub trait Material: Sync + Send {
     fn emitted(&self, ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
         Vector3::new(0.0, 0.0, 0.0)
     }
+    fn is_solid(&self) -> bool {
+        true
+    }
 }
 
 pub struct Lambertian {
@@ -155,6 +158,22 @@ impl EnvironmentMaterial for Environment {
     fn emit(&self, ray: &Ray) -> Vector3<f32> {
         let uv = get_sphere_uv(ray.direction());
         self.emit.value(uv, ray.direction())
+    }
+}
+
+pub struct Isotropic {
+    pub albedo: Arc<dyn Texture>
+}
+
+impl Material for Isotropic {
+    fn scatter(&self, _ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
+        Some((
+            Ray::new(hit.p, random_vec_in_unit_sphere()), 
+            self.albedo.value(hit.uv, hit.p)
+        ))
+    }
+    fn is_solid(&self) -> bool {
+        false
     }
 }
 

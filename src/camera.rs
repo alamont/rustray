@@ -57,6 +57,12 @@ impl Camera {
             self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin - offset,
         )
     }
+
+    pub fn get_ray_an(&self, s: f32, t: f32) -> Ray {
+        let mut ray = self.get_ray(s, t);
+        ray.albedo_normal_ray = true;
+        ray
+    }
 }
 
 impl Default for Camera {

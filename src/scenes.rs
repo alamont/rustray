@@ -7,6 +7,7 @@ pub mod earth_scene;
 pub mod random_scene;
 pub mod random_scene_light;
 pub mod cornell_box;
+pub mod cornell_box_vol;
 
 use std::sync::Arc;
 use crate::hittable::Hittable;
