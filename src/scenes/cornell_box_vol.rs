@@ -85,23 +85,6 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
         rect_type: XY
     })));
 
-
-    let box1 = Transform::new(
-        AABox::new(
-            vec3(165.0, 165.0, 165.0), 
-            white.clone()
-        ),
-        vec3(115.0 + 165.0/2.0, 165.0/2.0, 65.0 + 165.0/2.0),
-        vec3(0.0, -18.0, 0.0)
-    );
-    // let box2 = Transform::new(
-    //     AABox::new(
-    //         vec(165.0, 330.0, 165.0),
-    //         white.clone()
-    //     ),
-    //     vec3(280.0 + 165.0/2.0, 330.0/2.0, 295.0 + 165.0/2.0),
-    //     vec3(0.0, 15.0, 0.0)
-    // );
     let box2 = Transform::new(
         AABox::new(
             vec(165.0, 330.0, 165.0),

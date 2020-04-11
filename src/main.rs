@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_imports)]
 mod camera;
 mod hittable;
 mod material;
@@ -15,6 +16,7 @@ mod aabox;
 mod volume;
 mod triangle;
 mod mesh;
+mod utils;
 
 use cmd_lib::run_cmd;
 use hittable::{Hittable};
@@ -33,7 +35,7 @@ use scenes::{
     // dielectric_scene::dielectric_scene,
     earth_scene::earth_scene,
     random_scene_light::random_scene_light,
-    cornell_box::cornell_box,
+    cornell_box_scene::cornell_box,
     cornell_box_vol::cornell_box_vol,
     cornell_box_mesh::cornell_box_mesh
 };
@@ -112,7 +114,6 @@ fn main() {
     let ns = 10000;
     let max_depth = 50;
 
-    let mut ray_count: u32 = 0;
     let mut window = display();  
     let mut u32_buffer: Vec<u32>;
     let mut completed_samples = 0;
@@ -120,12 +121,9 @@ fn main() {
 
 
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
-    let mut albedo_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
-    let mut normal_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 
-
-    let aspect = nx as f32 / ny as f32;
-    let scene = cornell_box_mesh(aspect);
+    // let aspect = nx as f32 / ny as f32;
+    let scene = cornell_box_mesh();
 
     let world = scene.objects;
     let environment = scene.environment;
@@ -185,7 +183,7 @@ fn main() {
         }
     }
     
-    albedo_buf = (0..ny)
+    let albedo_buf = (0..ny)
         .into_par_iter()
         .flat_map(|y| {
             (0..nx)
@@ -198,7 +196,7 @@ fn main() {
                 }).collect::<Vec<f32>>()
         }).collect::<Vec<f32>>();
 
-    normal_buf = (0..ny)
+    let normal_buf = (0..ny)
         .into_par_iter()
         .flat_map(|y| {
             (0..nx)

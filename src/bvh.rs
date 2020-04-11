@@ -13,6 +13,7 @@ pub struct BVHNode {
     bbox: AABB,
 }
 
+#[allow(unreachable_patterns)]
 impl BVHNode {
     pub fn build(mut objects: Vec<Box<dyn Hittable>>, depth: u32) -> Box<dyn Hittable> {
         fn axis_range(objects: &Vec<Box<dyn Hittable>>, axis: usize) -> f32 {

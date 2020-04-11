@@ -79,7 +79,7 @@ impl ImageTexture {
 }
 
 impl Texture for ImageTexture {
-    fn value(&self, uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32> {        
+    fn value(&self, uv: Vector2<f32>, _p: Vector3<f32>) -> Vector3<f32> {        
         let mut i = (uv.x * self.nx as f32) as u32;
         let mut j = ((1.0 - uv.y) * self.ny as f32 - 0.001) as u32;
 
