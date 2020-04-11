@@ -58,7 +58,7 @@ pub trait Hittable: Sync + Send {
 
 #[derive(Default)]
 pub struct HittableList {
-    objects: Vec<Box<dyn Hittable>>,
+    pub objects: Vec<Box<dyn Hittable>>,
 }
 
 impl HittableList {
@@ -130,29 +130,49 @@ impl Hittable for FlipFace {
 pub struct Transform {
     pub object: Box<dyn Hittable>,
     pub offset: Vector3<f32>,
-    pub rotation: Vector3<f32>
+    pub rotation: Rotation3<f32>,
+    pub bbox: AABB
 }
 
 impl Transform {
     pub fn new(obj: impl Hittable + 'static, offset: Vector3<f32>, rotation_deg: Vector3<f32>) -> Self {
-        let rotation = rotation_deg.map(deg_to_rad);
+        let rotation = Rotation3::from_euler_angles(deg_to_rad(rotation_deg.x), deg_to_rad(rotation_deg.y), deg_to_rad(rotation_deg.z));
+        let bb_min_rot = rotation * obj.bounding_box().unwrap().min + offset;
+        let bb_max_rot = rotation * obj.bounding_box().unwrap().max + offset;
+        
+        let bb_min = Vector3::new(
+            bb_min_rot.x.min(bb_max_rot.x),
+            bb_min_rot.y.min(bb_max_rot.y),
+            bb_min_rot.z.min(bb_max_rot.z)
+        );
+
+        let bb_max = Vector3::new(
+            bb_min_rot.x.max(bb_max_rot.x),
+            bb_min_rot.y.max(bb_max_rot.y),
+            bb_min_rot.z.max(bb_max_rot.z)
+        );
+
         Self {
             object: Box::new(obj),
             offset,
-            rotation
+            rotation,
+            bbox: AABB {
+                min: bb_min,
+                max: bb_max
+            }
         }
     }
 }
 
 impl Hittable for Transform {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
-        let rot = Rotation3::from_euler_angles(self.rotation.x, self.rotation.y, self.rotation.z);
-        let mut moved_ray = Ray::new(rot.inverse()* (ray.origin() - self.offset), rot.inverse() * ray.direction());
+        let inv_rot = self.rotation.inverse();
+        let mut moved_ray = Ray::new(inv_rot * (ray.origin() - self.offset), inv_rot * ray.direction());
         moved_ray.albedo_normal_ray = ray.albedo_normal_ray;
 
         if let Some(mut hit_rec) = self.object.hit(&moved_ray, t_min, t_max) {
-            hit_rec.p = rot * hit_rec.p + self.offset;
-            hit_rec.set_face_normal(&moved_ray, rot * hit_rec.normal);            
+            hit_rec.p = self.rotation * hit_rec.p + self.offset;
+            hit_rec.normal = self.rotation * hit_rec.normal;            
             Some(hit_rec)
         } else {
             None
@@ -160,13 +180,6 @@ impl Hittable for Transform {
     }
 
     fn bounding_box(&self) -> Option<AABB> {
-        if let Some(bb) = self.object.bounding_box() {
-            Some(AABB {
-                min: bb.min + self.offset,
-                max: bb.max + self.offset
-            })
-        } else {
-            None
-        }
+        Some(self.bbox)
     }
 }

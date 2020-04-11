@@ -2,7 +2,7 @@ use crate::aabb::AABB;
 use crate::hittable::{HitRecord, Hittable};
 use crate::material::Material;
 use crate::ray::Ray;
-use crate::vec::vec;
+use crate::vec::{vec, vec3};
 
 use nalgebra::{Vector2, Vector3};
 use std::f32;
@@ -45,7 +45,7 @@ impl Hittable for AARect {
         let p = ray.at(t);
         let outward_normal = match &self.rect_type {
             XY => vec(0.0, 0.0, 1.0),
-            XZ => vec(0.0, 1.0, 0.0),
+            XZ => vec(0.0, -1.0, 0.0),
             YZ => vec(1.0, 0.0, 0.0),
         };
         Some(HitRecord::new(
@@ -65,7 +65,7 @@ impl Hittable for AARect {
         match &self.rect_type {
             XY => Some(AABB { min, max }),
             XZ => Some(AABB { min: min.xzy(), max: max.xzy() }),
-            YZ => Some(AABB { min: min.zyx(), max: max.zyx() }),
+            YZ => Some(AABB { min: min.zxy(), max: max.zxy() }),
         }
     }
 }

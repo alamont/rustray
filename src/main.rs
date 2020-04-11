@@ -13,6 +13,8 @@ mod world;
 mod aarect;
 mod aabox;
 mod volume;
+mod triangle;
+mod mesh;
 
 use cmd_lib::run_cmd;
 use hittable::{Hittable};
@@ -33,13 +35,14 @@ use scenes::{
     random_scene_light::random_scene_light,
     cornell_box::cornell_box,
     cornell_box_vol::cornell_box_vol,
+    cornell_box_mesh::cornell_box_mesh
 };
 use std::{f32, fs, sync::Arc, io, time::Instant};
 
 static mut RAY_COUNT: u32 = 0;
 
-const WIDTH: usize = 500;
-const HEIGHT: usize = 500;
+const WIDTH: usize = 1000;
+const HEIGHT: usize = 1000;
 const HDR_OUTPUT: bool = true;
 const DENOISE: bool = true;
 
@@ -122,7 +125,7 @@ fn main() {
 
 
     let aspect = nx as f32 / ny as f32;
-    let scene = cornell_box_vol(aspect);
+    let scene = cornell_box_mesh(aspect);
 
     let world = scene.objects;
     let environment = scene.environment;

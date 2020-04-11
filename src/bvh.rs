@@ -1,19 +1,20 @@
-use std::f32;
 use nalgebra::Vector3;
+use std::f32;
 
 use crate::aabb::{surrounding_box, AABB};
-use crate::hittable::{HitRecord, Hittable};
+use crate::hittable::{HitRecord, Hittable, HittableList};
 use crate::ray::Ray;
+
+const MAX_LEAF: usize = 2;
 
 pub struct BVHNode {
     left: Box<dyn Hittable>,
     right: Box<dyn Hittable>,
-    bbox: AABB
+    bbox: AABB,
 }
 
 impl BVHNode {
     pub fn build(mut objects: Vec<Box<dyn Hittable>>, depth: u32) -> Box<dyn Hittable> {
-        
         fn axis_range(objects: &Vec<Box<dyn Hittable>>, axis: usize) -> f32 {
             let range = objects.iter().fold(f32::MAX..f32::MIN, |range, obj| {
                 let bb = obj.bounding_box().unwrap();
@@ -29,7 +30,8 @@ impl BVHNode {
             axis_range(&objects, 0),
             axis_range(&objects, 1),
             axis_range(&objects, 2),
-        ).imax();
+        )
+        .imax();
 
         // sort_objects(&mut objects, axis as usize);
         objects.sort_unstable_by(|a, b| {
@@ -38,9 +40,9 @@ impl BVHNode {
             let left_hit = left_bb.min[axis] + left_bb.max[axis];
             let right_hit = right_bb.min[axis] + right_bb.max[axis];
             left_hit.partial_cmp(&right_hit).unwrap()
-        });       
+        });
 
-        println!("axis: {}, len: {}, depth: {}", axis, objects.len(), depth);
+        // println!("axis: {}, len: {}, depth: {}", axis, objects.len(), depth);
 
         match objects.len() {
             0 => panic!("length mismatch"),
@@ -55,13 +57,24 @@ impl BVHNode {
                 let bbox = surrounding_box(left_bbox, right_bbox);
                 Box::new(BVHNode { left, right, bbox })
             }
+            2..=MAX_LEAF => {
+                Box::new(HittableList { objects })
+            }
             _ => {
-                let mut a = objects;                
+                let mut a = objects;
                 let b = a.split_off(a.len() / 2);
-                let left = Self::build(b, depth+1);
-                let right = Self::build(a, depth+1);
-                let left_bbox = if let Some(bb) = left.bounding_box() { bb } else { AABB::zero() };
-                let right_bbox = if let Some(bb) = right.bounding_box() { bb } else { AABB::zero() };
+                let left = Self::build(b, depth + 1);
+                let right = Self::build(a, depth + 1);
+                let left_bbox = if let Some(bb) = left.bounding_box() {
+                    bb
+                } else {
+                    AABB::zero()
+                };
+                let right_bbox = if let Some(bb) = right.bounding_box() {
+                    bb
+                } else {
+                    AABB::zero()
+                };
                 let bbox = surrounding_box(left_bbox, right_bbox);
                 Box::new(BVHNode { left, right, bbox })
             }

@@ -13,7 +13,7 @@ pub struct ConstantTex {
 }
 
 impl Texture for ConstantTex {
-    fn value(&self, _uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32> {
+    fn value(&self, _uv: Vector2<f32>, _p: Vector3<f32>) -> Vector3<f32> {
         self.color
     }
 }

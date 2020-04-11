@@ -16,7 +16,7 @@ itertools = "^0.8"
 hsl = "^0.1"
 minifb = "0.15.3"
 cmd_lib = "0.7.8"
-# exr = "0.7.3"
+tobj = "1.0.0"
 
 # [profile.release]
 # lto = true

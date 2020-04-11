@@ -108,7 +108,7 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
             aluminium.clone()
         ),
         vec3(280.0 + 165.0/2.0, 330.0/2.0, 295.0 + 165.0/2.0),
-        vec3(0.0, 15.0, 0.0)
+        vec3(0.0, 15.0, 0.0),
     );
 
     let box1_no_transform = AABox::new(
