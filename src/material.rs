@@ -27,7 +27,7 @@ pub fn schlick(cosine: f32, ref_idx: f32) -> f32 {
 
 pub trait Material: Sync + Send {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)>;
-    fn emitted(&self, ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
+    fn emitted(&self, _ray: &Ray, _hit: &HitRecord) -> Vector3<f32> {
         Vector3::new(0.0, 0.0, 0.0)
     }
     fn is_solid(&self) -> bool {
