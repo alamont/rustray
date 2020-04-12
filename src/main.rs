@@ -31,20 +31,21 @@ use rayon::prelude::*;
 use scenes::{
     Scene,
     // random_scene_bvh::random_scene_bvh,
-    random_scene::random_scene,
-    // dielectric_scene::dielectric_scene,
-    earth_scene::earth_scene,
-    random_scene_light::random_scene_light,
-    cornell_box_scene::cornell_box,
-    cornell_box_vol::cornell_box_vol,
-    cornell_box_mesh::cornell_box_mesh
+    // random_scene::random_scene,
+    // // dielectric_scene::dielectric_scene,
+    // earth_scene::earth_scene,
+    // random_scene_light::random_scene_light,
+    // cornell_box_scene::cornell_box,
+    // cornell_box_vol::cornell_box_vol,
+    // cornell_box_mesh::cornell_box_mesh
+    cornell_box_texture_filtering::scene
 };
 use std::{f32, fs, sync::Arc, io, time::Instant};
 
 static mut RAY_COUNT: u32 = 0;
 
-const WIDTH: usize = 1000;
-const HEIGHT: usize = 1000;
+const WIDTH: usize = 500;
+const HEIGHT: usize = 500;
 const HDR_OUTPUT: bool = true;
 const DENOISE: bool = true;
 
@@ -123,7 +124,7 @@ fn main() {
     let mut image_buf: Vec<f32> = vec![0.0; (nx * ny * 3) as usize];
 
     // let aspect = nx as f32 / ny as f32;
-    let scene = cornell_box_mesh();
+    let scene = scene();
 
     let world = scene.objects;
     let environment = scene.environment;

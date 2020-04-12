@@ -9,7 +9,10 @@ pub mod random_scene_light;
 pub mod cornell_box_scene;
 pub mod cornell_box_vol;
 pub mod cornell_box_mesh;
+pub mod cornell_box_texture_filtering;
+
 pub mod prefabs;
+
 
 use std::sync::Arc;
 use crate::hittable::Hittable;

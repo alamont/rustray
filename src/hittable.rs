@@ -162,6 +162,34 @@ impl Transform {
             }
         }
     }
+
+    pub fn new_b(obj: Box<dyn Hittable>, offset: Vector3<f32>, rotation_deg: Vector3<f32>) -> Self {
+        let rotation = Rotation3::from_euler_angles(deg_to_rad(rotation_deg.x), deg_to_rad(rotation_deg.y), deg_to_rad(rotation_deg.z));
+        let bb_min_rot = rotation * obj.bounding_box().unwrap().min + offset;
+        let bb_max_rot = rotation * obj.bounding_box().unwrap().max + offset;
+        
+        let bb_min = Vector3::new(
+            bb_min_rot.x.min(bb_max_rot.x),
+            bb_min_rot.y.min(bb_max_rot.y),
+            bb_min_rot.z.min(bb_max_rot.z)
+        );
+
+        let bb_max = Vector3::new(
+            bb_min_rot.x.max(bb_max_rot.x),
+            bb_min_rot.y.max(bb_max_rot.y),
+            bb_min_rot.z.max(bb_max_rot.z)
+        );
+
+        Self {
+            object: obj,
+            offset,
+            rotation,
+            bbox: AABB {
+                min: bb_min,
+                max: bb_max
+            }
+        }
+    }
 }
 
 impl Hittable for Transform {

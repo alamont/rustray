@@ -1,21 +1,14 @@
 use nalgebra::Vector3;
 use std::sync::Arc;
 
-use crate::hittable::{Hittable, FlipFace, Transform};
-use crate::camera::Camera;
+use crate::hittable::{Hittable, Transform};
 use crate::material::{
     Dielectric, 
-    Lambertian, 
-    Metal, 
-    Environment, 
-    DiffuseLight,
-    Isotropic
+    Metal
 };
-use crate::volume::{ConstantMedium, NonUniformMedium};
-use crate::aarect::{AARect, AARectType::*};
-use crate::vec::{vec, vec2, vec3, vec_one, random_vec, random_vec_range, vec_zero};
+use crate::vec::{vec, vec3, vec_zero};
 use crate::bvh::BVHNode;
-use crate::texture::{ConstantTex, CheckerTex, ImageTexture};
+use crate::texture::{ConstantTex};
 use crate::scenes::Scene;
 use crate::sphere::Sphere;
 use crate::mesh::Mesh;
