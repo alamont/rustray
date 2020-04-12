@@ -11,7 +11,7 @@ use crate::sphere::Sphere;
 use crate::texture::{CheckerTex, CheckerTexMap, ConstantTex};
 use crate::vec::{vec, vec_zero};
 
-pub fn dielectric_scene(aspect: f32) -> (Camera, Box<dyn Hittable>) {
+pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     let mut world = HittableList::default();
 
     let checker_floor = Arc::new(CheckerTex {
@@ -117,6 +117,6 @@ pub fn dielectric_scene(aspect: f32) -> (Camera, Box<dyn Hittable>) {
 
     (
         Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus),
-        Box::new(world),
+        Arc::new(world),
     )
 }

@@ -12,7 +12,7 @@ use rand::{thread_rng, Rng};
 
 
 pub struct ConstantMedium {
-    boundary: Box<dyn Hittable>,
+    boundary:Arc<dyn Hittable>,
     phase_function: Arc<dyn Material>,
     neg_inv_density: f32
 }
@@ -20,7 +20,7 @@ pub struct ConstantMedium {
 impl ConstantMedium {
     pub fn new(boundary: impl Hittable + 'static, density: f32, material: Arc<dyn Material>) -> Self {
         Self {
-            boundary: Box::new(boundary),
+            boundary: Arc::new(boundary),
             phase_function: material,
             neg_inv_density: -1.0 / density
         }
@@ -72,7 +72,7 @@ impl Hittable for ConstantMedium {
 }
 
 pub struct NonUniformMedium {
-    boundary: Box<dyn Hittable>,
+    boundary:Arc<dyn Hittable>,
     phase_function: Arc<dyn Material>,
     density: Arc<dyn Texture>,
     max_density: f32,
@@ -81,7 +81,7 @@ pub struct NonUniformMedium {
 impl NonUniformMedium {
     pub fn new(boundary: impl Hittable + 'static, density: Arc<dyn Texture>, max_density: f32, material: Arc<dyn Material>) -> Self {
         Self {
-            boundary: Box::new(boundary),
+            boundary: Arc::new(boundary),
             phase_function: material,
             density,
             max_density

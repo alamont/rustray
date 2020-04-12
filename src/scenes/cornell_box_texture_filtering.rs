@@ -15,7 +15,7 @@ use crate::texture::{ConstantTex, ImageTexture, Sampler::*, WrapMode::*};
 use crate::vec::{vec, vec2, vec3, vec_zero};
 
 pub fn scene() -> Scene {
-    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
+    let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
 
     objects.push(cornell_box());
     let glass = Arc::new(Dielectric {
@@ -36,8 +36,8 @@ pub fn scene() -> Scene {
         }),
     });
 
-    // objects.push(Box::new(Transform::new_b(
-    //     Box::new(FlipFace::new(AARect {
+    // objects.push(Arc::new(Transform::new_b(
+    //     Arc::new(FlipFace::new(AARect {
     //         xy0: vec2(-50.0, -50.0),
     //         xy1: vec2(50.0, 50.0),
     //         k: 554.0,
@@ -47,8 +47,8 @@ pub fn scene() -> Scene {
     //     vec3(-200.0, 0.0, -200.0),
     //     vec_zero(),
     // )));
-    // objects.push(Box::new(Transform::new_b(
-    //     Box::new(FlipFace::new(AARect {
+    // objects.push(Arc::new(Transform::new_b(
+    //     Arc::new(FlipFace::new(AARect {
     //         xy0: vec2(-50.0, -50.0),
     //         xy1: vec2(50.0, 50.0),
     //         k: 554.0,
@@ -58,8 +58,8 @@ pub fn scene() -> Scene {
     //     vec3(-200., 0.00, 200.0),
     //     vec_zero(),
     // )));
-    // objects.push(Box::new(Transform::new_b(
-    //     Box::new(FlipFace::new(AARect {
+    // objects.push(Arc::new(Transform::new_b(
+    //     Arc::new(FlipFace::new(AARect {
     //         xy0: vec2(-50.0, -50.0),
     //         xy1: vec2(50.0, 50.0),
     //         k: 554.0,
@@ -69,8 +69,8 @@ pub fn scene() -> Scene {
     //     vec3(200.0, 0.0, -200.0),
     //     vec_zero(),
     // )));
-    // objects.push(Box::new(Transform::new_b(
-    //     Box::new(FlipFace::new(AARect {
+    // objects.push(Arc::new(Transform::new_b(
+    //     Arc::new(FlipFace::new(AARect {
     //         xy0: vec2(-50.0, -50.0),
     //         xy1: vec2(50.0, 50.0),
     //         k: 554.0,
@@ -81,8 +81,8 @@ pub fn scene() -> Scene {
     //     vec_zero(),
     // )));
 
-        objects.push(Box::new(Transform::new_b(
-            Box::new(FlipFace::new(AARect {
+        objects.push(Arc::new(Transform::new_b(
+            Arc::new(FlipFace::new(AARect {
                 xy0: vec2(-50.0, -50.0),
                 xy1: vec2(50.0, 50.0),
                 k: 0.0,
@@ -93,8 +93,8 @@ pub fn scene() -> Scene {
             vec3(20.0, -20.0 ,0.0),
         )));
 
-        objects.push(Box::new(Transform::new_b(
-            Box::new(FlipFace::new(AARect {
+        objects.push(Arc::new(Transform::new_b(
+            Arc::new(FlipFace::new(AARect {
                 xy0: vec2(-50.0, -50.0),
                 xy1: vec2(50.0, 50.0),
                 k: 0.0,
@@ -105,13 +105,13 @@ pub fn scene() -> Scene {
             vec3(-20.0, 20.0 ,0.0),
         )));
 
-    objects.push(Box::new(Transform::new(
+    objects.push(Arc::new(Transform::new(
         Sphere::new(vec_zero(), 199.999, earth_material),
         vec3(0.0, 200.0, -100.0),
         vec_zero(),
     )));
 
-    objects.push(Box::new(Transform::new(
+    objects.push(Arc::new(Transform::new(
         Sphere::new(vec_zero(), 200.0, glass),
         vec3(0.0, 200.0, -100.0),
         vec_zero(),

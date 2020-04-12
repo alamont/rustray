@@ -23,12 +23,12 @@ pub fn cornell_box_mesh() -> Scene {
     });
 
 
-    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
+    let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
 
     objects.push(cornell_box());
 
     let mesh = Mesh::new(String::from("assets/teapot2.obj"), aluminium, Vector3::new(10.0, 10.0, 10.0));
-    objects.push(Box::new(
+    objects.push(Arc::new(
         Transform::new(
             mesh,
             Vector3::new(0.0, 100.0, 0.0),
@@ -36,7 +36,7 @@ pub fn cornell_box_mesh() -> Scene {
         ))
     );
 
-    objects.push(Box::new(Transform::new(
+    objects.push(Arc::new(Transform::new(
         Sphere::new(vec_zero(), 50.0, glass.clone()),
         vec3(100.0, 50.0, 100.0),
         vec_zero(),

@@ -19,51 +19,51 @@ pub fn cornell_box(aspect: f32) -> Scene {
     let light = Arc::new(DiffuseLight { emit: Arc::new(ConstantTex { color: vec3(14.0, 14.0, 14.0) })});
     let aluminium  = Arc::new(Metal { albedo: Arc::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
 
-    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
+    let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
 
-    objects.push(Box::new(FlipFace::new(AARect { 
+    objects.push(Arc::new(FlipFace::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
         material: green.clone(),
         rect_type: YZ
     })));
-    objects.push(Box::new(AARect { 
+    objects.push(Arc::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 0.0,
         material: red.clone(),
         rect_type: YZ
     }));
-    objects.push(Box::new(AARect { 
+    objects.push(Arc::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
         material: white.clone(),
         rect_type: XZ
     }));
-    objects.push(Box::new(FlipFace::new(AARect { 
+    objects.push(Arc::new(FlipFace::new(AARect { 
         xy0: vec2(213.0, 227.0), 
         xy1: vec2(343.0, 332.0),
         k: 554.0,
         material: light.clone(),
         rect_type: XZ
     })));
-    // objects.push(Box::new(FlipFace::new(AARect { 
+    // objects.push(Arc::new(FlipFace::new(AARect { 
     //     xy0: vec2(113.0, 127.0), 
     //     xy1: vec2(443.0, 442.0),
     //     k: 554.0,
     //     material: light.clone(),
     //     rect_type: XZ
     // })));
-    objects.push(Box::new(AARect { 
+    objects.push(Arc::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 0.0,
         material: white.clone(),
         rect_type: XZ
     }));
-    objects.push(Box::new(FlipFace::new(AARect { 
+    objects.push(Arc::new(FlipFace::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
@@ -96,8 +96,8 @@ pub fn cornell_box(aspect: f32) -> Scene {
         vec3(0.0, 15.0, 0.0)
     );
 
-    objects.push(Box::new(box1));
-    objects.push(Box::new(box2));
+    objects.push(Arc::new(box1));
+    objects.push(Arc::new(box2));
 
 
 

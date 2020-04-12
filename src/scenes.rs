@@ -20,7 +20,7 @@ use crate::camera::Camera;
 use crate::material::EnvironmentMaterial;
 
 pub struct Scene {
-    pub objects: Box<dyn Hittable>,
+    pub objects:Arc<dyn Hittable>,
     pub environment: Arc<dyn EnvironmentMaterial>,
     pub camera: Camera
 }

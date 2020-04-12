@@ -31,23 +31,23 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
     let dark_medium = Arc::new(Isotropic { albedo: Arc::new(ConstantTex { color: vec_zero() })});
     let light_medium = Arc::new(Isotropic { albedo: Arc::new(ConstantTex { color: vec_one() })});
 
-    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
+    let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
 
-    objects.push(Box::new(FlipFace::new(AARect { 
+    objects.push(Arc::new(FlipFace::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
         material: green.clone(),
         rect_type: YZ
     })));
-    objects.push(Box::new(AARect { 
+    objects.push(Arc::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 0.0,
         material: red.clone(),
         rect_type: YZ
     }));
-    objects.push(Box::new(AARect { 
+    objects.push(Arc::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
@@ -55,7 +55,7 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
         rect_type: XZ
     }));
     // // Original light
-    // objects.push(Box::new(FlipFace::new(AARect { 
+    // objects.push(Arc::new(FlipFace::new(AARect { 
     //     xy0: vec2(213.0, 227.0), 
     //     xy1: vec2(343.0, 332.0),
     //     k: 554.0,
@@ -63,21 +63,21 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
     //     rect_type: XZ
     // })));
     // Bigger light
-    objects.push(Box::new(FlipFace::new(AARect { 
+    objects.push(Arc::new(FlipFace::new(AARect { 
         xy0: vec2(113.0, 127.0), 
         xy1: vec2(443.0, 442.0),
         k: 554.0,
         material: light.clone(),
         rect_type: XZ
     })));
-    objects.push(Box::new(AARect { 
+    objects.push(Arc::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 0.0,
         material: white.clone(),
         rect_type: XZ
     }));
-    objects.push(Box::new(FlipFace::new(AARect { 
+    objects.push(Arc::new(FlipFace::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
@@ -105,12 +105,12 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
     });
 
 
-    // objects.push(Box::new(NonUniformMedium::new(box1, 0.05, light_medium)));
-    objects.push(Box::new(ConstantMedium::new(box2, 0.02, dark_medium)));
+    // objects.push(Arc::new(NonUniformMedium::new(box1, 0.05, light_medium)));
+    objects.push(Arc::new(ConstantMedium::new(box2, 0.02, dark_medium)));
 
     // To get local coordinates (before transform) for mediums, 
     // we need to apply the transform om the medium instead of the boundary
-    objects.push(Box::new(
+    objects.push(Arc::new(
         Transform::new(
             NonUniformMedium::new(box1_no_transform, box1_density_texture, 0.02, light_medium),
             vec3(115.0 + 165.0/2.0, 165.0/2.0, 65.0 + 165.0/2.0),

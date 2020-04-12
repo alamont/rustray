@@ -9,7 +9,7 @@ use crate::sphere::Sphere;
 use crate::vec::{vec, random_vec, random_vec_range};
 use crate::bvh::BVHNode;
 
-pub fn random_scene_no_bvh() -> Box<dyn Hittable> {
+pub fn random_scene_no_bvh() ->Arc<dyn Hittable> {
     let mut world = HittableList::default();
     let mut rng = thread_rng();
 
@@ -84,5 +84,5 @@ pub fn random_scene_no_bvh() -> Box<dyn Hittable> {
         })
     });
 
-    Box::new(world)
+    Arc::new(world)
 }

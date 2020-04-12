@@ -14,14 +14,14 @@ use std::path::Path;
 use tobj;
 
 pub struct Mesh {
-    pub triangles: Box<dyn Hittable>,
+    pub triangles:Arc<dyn Hittable>,
     pub material: Arc<dyn Material>,
 }
 
 impl Mesh {
     pub fn new(mesh_path: String, material:  Arc<dyn Material>, scale: Vector3<f32>) -> Self {
 
-        // let triangles: Vec<Box<dyn Hittable>> = Vec::new();
+        // let triangles: Vec<Arc<dyn Hittable>> = Vec::new();
 
         let obj = tobj::load_obj(&Path::new(&mesh_path));
         assert!(obj.is_ok());
@@ -54,7 +54,7 @@ impl Mesh {
             };
 
 
-            Box::new(Triangle {
+            Arc::new(Triangle {
                 v0: v[0] * scale.x,
                 v1: v[1] * scale.y,
                 v2: v[2] * scale.z,
@@ -62,8 +62,8 @@ impl Mesh {
                 n0: n[0],
                 n1: n[1],
                 n2: n[2],
-            }) as Box<dyn Hittable>
-        }).collect::<Vec<Box<dyn Hittable>>>();
+            }) as Arc<dyn Hittable>
+        }).collect::<Vec<Arc<dyn Hittable>>>();
 
         Self {
             triangles: BVHNode::build(triangles, 0),

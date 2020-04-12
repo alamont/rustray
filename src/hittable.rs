@@ -58,15 +58,15 @@ pub trait Hittable: Sync + Send {
 
 #[derive(Default)]
 pub struct HittableList {
-    pub objects: Vec<Box<dyn Hittable>>,
+    pub objects: Vec<Arc<dyn Hittable>>,
 }
 
 impl HittableList {
     pub fn push(&mut self, hittable: impl Hittable + 'static) {
-        self.objects.push(Box::new(hittable));
+        self.objects.push(Arc::new(hittable));
     }
 
-    pub fn push_without_box(&mut self, hittable: Box<dyn Hittable>) {
+    pub fn push_without_box(&mut self, hittable: Arc<dyn Hittable>) {
         self.objects.push(hittable);
     }
 }
@@ -102,13 +102,13 @@ impl Hittable for HittableList {
 }
 
 pub struct FlipFace {
-    pub object: Box<dyn Hittable>
+    pub object: Arc<dyn Hittable>
 }
 
 impl FlipFace {
     pub fn new(obj: impl Hittable + 'static) -> Self {
         Self {
-            object: Box::new(obj)
+            object:Arc::new(obj)
         }
     }
 }
@@ -128,7 +128,7 @@ impl Hittable for FlipFace {
 }
 
 pub struct Transform {
-    pub object: Box<dyn Hittable>,
+    pub object: Arc<dyn Hittable>,
     pub offset: Vector3<f32>,
     pub rotation: Rotation3<f32>,
     pub bbox: AABB
@@ -153,7 +153,7 @@ impl Transform {
         );
 
         Self {
-            object: Box::new(obj),
+            object:Arc::new(obj),
             offset,
             rotation,
             bbox: AABB {
@@ -163,7 +163,7 @@ impl Transform {
         }
     }
 
-    pub fn new_b(obj: Box<dyn Hittable>, offset: Vector3<f32>, rotation_deg: Vector3<f32>) -> Self {
+    pub fn new_b(obj: Arc<dyn Hittable>, offset: Vector3<f32>, rotation_deg: Vector3<f32>) -> Self {
         let rotation = Rotation3::from_euler_angles(deg_to_rad(rotation_deg.x), deg_to_rad(rotation_deg.y), deg_to_rad(rotation_deg.z));
         let bb_min_rot = rotation * obj.bounding_box().unwrap().min + offset;
         let bb_max_rot = rotation * obj.bounding_box().unwrap().max + offset;

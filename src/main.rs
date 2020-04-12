@@ -55,7 +55,7 @@ fn clamp(x: f32, min: f32, max: f32) -> f32 {
     x
 }
 
-fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, environment: &Arc<dyn EnvironmentMaterial>, depth: u32) -> Vector3<f32> {
+fn ray_color(ray: &Ray, world: &Arc<dyn Hittable>, environment: &Arc<dyn EnvironmentMaterial>, depth: u32) -> Vector3<f32> {
     unsafe {
         RAY_COUNT += 1;
     }
@@ -74,7 +74,7 @@ fn ray_color(ray: &Ray, world: &Box<dyn Hittable>, environment: &Arc<dyn Environ
     }
 }
 
-fn ray_albedo(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
+fn ray_albedo(ray: &Ray, world: &Arc<dyn Hittable>) -> Vector3<f32> {
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
         if let Some((_new_ray, attenuation)) = hit_rec.material.scatter(&ray, &hit_rec) {
             return attenuation;
@@ -83,7 +83,7 @@ fn ray_albedo(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
     vec_zero()
 }
 
-fn ray_normal(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
+fn ray_normal(ray: &Ray, world: &Arc<dyn Hittable>) -> Vector3<f32> {
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
         return hit_rec.normal.normalize();
     }
