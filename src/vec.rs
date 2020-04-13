@@ -84,3 +84,7 @@ pub fn random_vec_range(a: f32, b: f32) -> Vector3<f32> {
         rng.gen_range(a, b)
     )
 }
+
+pub fn has_nan(v: &Vector3<f32>) -> bool {
+    v.x.is_nan() || v.y.is_nan() || v.z.is_nan()
+}

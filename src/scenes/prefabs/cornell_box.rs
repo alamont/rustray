@@ -67,7 +67,7 @@ pub fn cornell_box_camera() -> Camera {
     let lookfrom = vec3(0.0, 278.0, 1078.0);
     let lookat = vec3(0.0, 278.0, 0.0);
     let vup = vec3(0.0, 1.0, 0.0);
-    let dist_to_focus = 10.0;
+    let dist_to_focus = (lookfrom-lookat).magnitude();
     let aperture = 0.0;
     let vfov = 40.0;
     let aspect = 1.0;

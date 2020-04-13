@@ -6,7 +6,7 @@ use crate::hittable::{HitRecord};
 use crate::ray::Ray;
 use crate::vec::{random_unit_vec, random_vec_in_unit_sphere};
 use crate::texture::{ConstantTex, Texture};
-use crate::vec::{vec, vec_zero};
+use crate::vec::{vec, vec_zero, vec_one};
 
 pub fn reflect(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
     v - 2.0*v.dot(&n)*n
@@ -156,7 +156,7 @@ pub struct Environment {
 
 impl EnvironmentMaterial for Environment {
     fn emit(&self, ray: &Ray) -> Vector3<f32> {
-        let uv = get_sphere_uv(ray.direction());
+        let uv = get_sphere_uv(ray.direction().normalize());
         self.emit.value(uv, ray.direction())
     }
 }
@@ -183,4 +183,57 @@ fn get_sphere_uv(p: Vector3<f32>) -> Vector2<f32> {
     let u = 1.0 - (phi + f32::consts::PI) / (2.0 * f32::consts::PI);
     let v = (theta + f32::consts::PI / 2.0) / f32::consts::PI;
     Vector2::new(u, v)
+}
+
+
+
+pub struct DielectricSurfaceLambert {
+    pub ref_idx: f32,
+    pub albedo: Arc<dyn Texture>,
+    pub roughness: Arc<dyn Texture>,
+}
+
+impl Material for DielectricSurfaceLambert {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
+        let mut attenuation = vec_one();
+        let etai_over_etat = if hit.front_face {
+            1.0 / self.ref_idx
+        } else {
+            self.ref_idx
+        };
+
+        let normal = (hit.normal + self.roughness.value(hit.uv, hit.p).x * random_vec_in_unit_sphere()).normalize();
+
+        let unit_direction = ray.direction().normalize();
+        let cos_theta = (-unit_direction).dot(&normal).min(1.0);
+        let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
+
+        let scattered = if etai_over_etat * sin_theta > 1.0 {
+            let reflected = reflect(unit_direction, normal);
+            Ray::new(hit.p, reflected)
+        } else {
+            let reflect_prob = schlick(cos_theta, self.ref_idx);
+            let mut rng = thread_rng();
+            let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
+                reflect(unit_direction, normal)
+            } else {                                
+                // Instead of refracting we fo Lambertian               
+                attenuation = self.albedo.value(hit.uv, hit.p);
+                hit.normal + random_unit_vec()
+            };
+            Ray::new(hit.p, refracted_or_reflected)
+        };
+
+        Some((scattered, attenuation))
+    }
+}
+
+impl Default for DielectricSurfaceLambert {
+    fn default() -> DielectricSurfaceLambert {
+        DielectricSurfaceLambert {
+            ref_idx: 1.52,
+            albedo: Arc::new(ConstantTex { color: vec_one() }),
+            roughness: Arc::new(ConstantTex { color: vec_zero() }),            
+        }
+    }
 }

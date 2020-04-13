@@ -3,6 +3,11 @@ use crate::vec::{deg_to_rad, random_unit_in_disk};
 
 use nalgebra::Vector3;
 
+pub enum ApertureShape {
+    Circle,
+    Hexagon
+}
+
 pub struct Camera {
     pub origin: Vector3<f32>,
     pub lower_left_corner: Vector3<f32>,
@@ -11,7 +16,8 @@ pub struct Camera {
     u: Vector3<f32>,
     v: Vector3<f32>,
     w: Vector3<f32>,
-    lens_radius: f32,
+    pub lens_radius: f32,
+    pub aperture_shape: ApertureShape
 }
 
 impl Camera {
@@ -24,6 +30,7 @@ impl Camera {
         aperture: f32,
         focus_dist: f32
     ) -> Camera {
+        use ApertureShape::*;
         let lens_radius = aperture / 2.0;
 
         let theta = deg_to_rad(vfov);
@@ -46,11 +53,23 @@ impl Camera {
             lower_left_corner,
             horizontal,
             vertical,
-            u, v, w, lens_radius
+            u, v, w, lens_radius,
+            aperture_shape: Circle
         }
     }
     pub fn get_ray(&self, s: f32, t: f32) -> Ray {
-        let rd = self.lens_radius * random_unit_in_disk();
+        use ApertureShape::*;
+        let rd = match &self.aperture_shape {
+            Circle => self.lens_radius * random_unit_in_disk(),
+            Hexagon => {
+                loop {
+                    let p = self.lens_radius * random_unit_in_disk();
+                    if inside_hexagon(self.lens_radius * 2.0, p.x, p.y) {
+                        break p;
+                    }
+                }
+            }
+        };
         let offset = self.u * rd.x + self.v * rd.y;
         Ray::new(
             self.origin + offset,
@@ -81,4 +100,12 @@ impl Default for Camera {
             dist_to_focus
         )
     }
+}
+
+const A: f32 = 0.25 * 1.73205080757;
+
+fn inside_hexagon(d: f32, x: f32, y: f32) -> bool {
+    let dx = x.abs() / d;
+    let dy = y.abs() / d;
+    (dy <= A) && (A*dx + 0.25*dy <= 0.5*A)
 }

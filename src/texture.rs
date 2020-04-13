@@ -1,5 +1,7 @@
 use nalgebra::{Vector2, Vector3, Vector4};
 use std::sync::Arc;
+use image::{ImageBuffer, DynamicImage, GenericImageView, ColorType, Pixel, GenericImage};
+use num_traits::{ToPrimitive};
 
 use crate::hittable::HitRecord;
 use crate::vec::vec_zero;
@@ -73,26 +75,40 @@ pub enum WrapMode {
     Mirror,
 }
 
-pub struct ImageTexture {
-    data: Vec<u8>,
+pub trait PixelValue {
+    fn cast_and_scale(self) -> f32;
+}
+
+impl PixelValue for u8 {
+    fn cast_and_scale(self) -> f32 {
+        self.to_f32().unwrap() / 255.0
+    }
+}
+
+impl PixelValue for f32 {
+    fn cast_and_scale(self) -> f32 {
+        self
+    }
+}
+
+pub struct ImageTexture<T: image::Primitive + Sync + Send + PixelValue>
+where
+    T: 'static,
+{
+    image_buffer: ImageBuffer<image::Rgb<T>, Vec<T>>,
     width: u32,
     height: u32,
     _sampler: Sampler, 
-    // TODO: Add Texture Format. e.g. RGB, RGBA
     _wrap_mode: WrapMode,
 }
 
-impl ImageTexture {
-    pub fn new(image_path: String) -> Self {
+impl<T: image::Primitive + Sync + Send + PixelValue> ImageTexture<T> {
+    pub fn new(image_buffer: ImageBuffer<image::Rgb<T>, Vec<T>>) -> Self {
         use Sampler::*;
         use WrapMode::*;
-        let image = image::open(image_path.as_str())
-            .expect("Can't find image")
-            .to_rgb();
-        let (width, height) = image.dimensions();
-        let pixels = image.into_raw();
+        let (width, height) = image_buffer.dimensions();
         ImageTexture {
-            data: pixels,
+            image_buffer,
             width,
             height,
             _sampler: Nearest,
@@ -107,9 +123,17 @@ impl ImageTexture {
         self._wrap_mode = wrap_mode;
         self
     }
+    fn get_pixel(&self, i: u32, j: u32) -> Vector3<f32> {
+        let pixel = self.image_buffer.get_pixel(i, j);
+        Vector3::new(
+            pixel[0].cast_and_scale(),
+            pixel[1].cast_and_scale(),
+            pixel[2].cast_and_scale()
+        )
+    }
 }
 
-impl Texture for ImageTexture {
+impl<T: image::Primitive + Sync + Send + PixelValue> Texture for ImageTexture<T> {
     fn value(&self, uv: Vector2<f32>, _p: Vector3<f32>) -> Vector3<f32> {
         use Sampler::*;
         use WrapMode::*;
@@ -163,9 +187,9 @@ impl Texture for ImageTexture {
                 let w4 = px * py;
                 let w = Vector4::new(w1, w2, w3, w4);
 
-                let r = Vector4::new(p1.x, p2.x, p3.x, p4.x).dot(&w);
-                let g = Vector4::new(p1.y, p2.y, p3.y, p4.y).dot(&w);
-                let b = Vector4::new(p1.z, p2.z, p3.z, p4.z).dot(&w);
+                let r = Vector4::new(p1[0], p2[0], p3[0], p4[0]).dot(&w);
+                let g = Vector4::new(p1[1], p2[1], p3[1], p4[1]).dot(&w);
+                let b = Vector4::new(p1[2], p2[2], p3[2], p4[2]).dot(&w);
 
                 Vector3::new(r, g, b)
             }
@@ -174,11 +198,24 @@ impl Texture for ImageTexture {
     }
 }
 
-impl ImageTexture {
-    fn get_pixel(&self, i: u32, j: u32) -> Vector3<f32> {
-        let r = self.data[(3 * i + 3 * self.width * j + 0) as usize] as f32 / 255.0;
-        let g = self.data[(3 * i + 3 * self.width * j + 1) as usize] as f32 / 255.0;
-        let b = self.data[(3 * i + 3 * self.width * j + 2) as usize] as f32 / 255.0;
-        Vector3::new(r, g, b)
-    }
+// impl ImageTexture<T> {
+//     // fn get_pixel(&self, i: u32, j: u32) -> Vector3<f32> {
+
+//     //     self.data.
+//     //     let r = self.data[(3 * i + 3 * self.width * j + 0) as usize] as f32 / 255.0;
+//     //     let g = self.data[(3 * i + 3 * self.width * j + 1) as usize] as f32 / 255.0;
+//     //     let b = self.data[(3 * i + 3 * self.width * j + 2) as usize] as f32 / 255.0;
+//     //     Vector3::new(r, g, b)
+//     // }
+//     fn rgb8_to_rgb32(pixel: image::Rgb<u8>) -> Vector3<f32> {
+//         Vector3::new(
+//             pixel[0] as f32 / 255.0,
+//             pixel[1] as f32 / 255.0,
+//             pixel[2] as f32 / 255.0
+//         )
+//     }
+// }
+
+pub fn hdr_image_loader(image_path: String) {
+
 }

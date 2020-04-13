@@ -21,7 +21,7 @@ mod utils;
 use cmd_lib::run_cmd;
 use hittable::{Hittable};
 use ray::Ray;
-use vec::vec_zero;
+use vec::{vec_zero, has_nan};
 use image::{ImageBuffer, hdr::{HDREncoder}, Rgb};
 use material::EnvironmentMaterial;
 use minifb::{Key, ScaleMode, Window, WindowOptions};
@@ -38,13 +38,15 @@ use scenes::{
     // cornell_box_scene::cornell_box,
     // cornell_box_vol::cornell_box_vol,
     // cornell_box_mesh::cornell_box_mesh
-    cornell_box_texture_filtering::scene
+    // cornell_box_texture_filtering::scene
+    env_scene::scene
 };
 use std::{f32, fs, sync::Arc, io, time::Instant};
+use texture::hdr_image_loader;
 
 static mut RAY_COUNT: u32 = 0;
 
-const WIDTH: usize = 500;
+const WIDTH: usize = 1000;
 const HEIGHT: usize = 500;
 const HDR_OUTPUT: bool = true;
 const DENOISE: bool = true;
@@ -65,12 +67,22 @@ fn ray_color(ray: &Ray, world: &Arc<dyn Hittable>, environment: &Arc<dyn Environ
 
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
         if let Some((new_ray, attenuation)) = hit_rec.material.scatter(&ray, &hit_rec) {
+            if has_nan(&attenuation) {
+                return vec_zero();
+            }
             return attenuation.component_mul(&ray_color(&new_ray, world, environment, depth - 1));
         }
         let emitted = hit_rec.material.emitted(ray, &hit_rec);
+        if has_nan(&emitted) {
+            return vec_zero();
+        }
         return emitted;
     } else {
-        environment.emit(ray)
+        let emitted = environment.emit(ray);
+        if has_nan(&emitted) {
+            return vec_zero();
+        }
+        emitted
     }
 }
 
@@ -109,6 +121,12 @@ fn display() -> Window {
 }
 
 fn main() {
+
+    // let image = image::open("assets/umhlanga_sunrise_4k.hdr")
+    //         .expect("Can't find image")
+    //         .to_rgb();
+    //         image.
+    // return None;
 
     let nx: u32 = WIDTH as u32;
     let ny: u32 = HEIGHT as u32;
