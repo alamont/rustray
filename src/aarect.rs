@@ -7,6 +7,7 @@ use crate::vec::{vec, vec3};
 use nalgebra::{Vector2, Vector3};
 use std::f32;
 use std::sync::Arc;
+use rand::{thread_rng, Rng};
 
 pub enum AARectType {
     XY,
@@ -66,6 +67,25 @@ impl Hittable for AARect {
             XY => Some(AABB { min, max }),
             XZ => Some(AABB { min: min.xzy(), max: max.xzy() }),
             YZ => Some(AABB { min: min.zxy(), max: max.zxy() }),
+        }
+    }
+
+    fn pdf_value(&self, origin: &Vector3<f32>, direction: &Vector3<f32>) -> f32 {
+        let ray = &Ray::new(*origin, *direction);
+        if let Some(hit) = &self.hit(ray, 0.001, f32::MAX) {
+            let area = (self.xy1.x - self.xy0.x) * (self.xy1.y - self.xy0.y);
+            let distance_squared = (ray.at(hit.t) - ray.origin()).magnitude_squared();
+            let cosine = (direction.dot(&hit.normal) / direction.magnitude()).abs();
+            distance_squared / ( cosine  * area )
+        } else { 0.0 }        
+    }
+    fn random(&self, origin: &Vector3<f32>) -> Vector3<f32> {
+        use AARectType::*;
+        let mut rng = thread_rng();
+        match &self.rect_type {
+            XY => vec3(rng.gen_range(self.xy0.x, self.xy1.x), rng.gen_range(self.xy0.y, self.xy1.y), self.k) - origin,
+            XZ => vec3(rng.gen_range(self.xy0.x, self.xy1.x), self.k, rng.gen_range(self.xy0.y, self.xy1.y)) - origin,
+            YZ => vec3(self.k, rng.gen_range(self.xy0.x, self.xy1.x), rng.gen_range(self.xy0.y, self.xy1.y)) - origin,
         }
     }
 }

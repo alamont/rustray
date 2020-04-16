@@ -6,7 +6,8 @@ use crate::hittable::{HitRecord};
 use crate::ray::Ray;
 use crate::vec::{random_unit_vec, random_vec_in_unit_sphere};
 use crate::texture::{ConstantTex, Texture};
-use crate::vec::{vec, vec_zero, vec_one};
+use crate::pdf::{Pdf, CosinePdf};
+use crate::vec::{vec, vec_zero, vec_one, random_cosine_direction, onb_local};
 
 pub fn reflect(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
     v - 2.0*v.dot(&n)*n
@@ -25,9 +26,21 @@ pub fn schlick(cosine: f32, ref_idx: f32) -> f32 {
     r0 + (1.0 - r0) * (1.0 - cosine).powf(5.0)
 }
 
+pub struct ScatterRecord {
+    pub specular_ray: Option<Ray>,
+    pub attenuation: Vector3<f32>,
+    pub pdf: Option<Arc<dyn Pdf>>
+
+}
+
 pub trait Material: Sync + Send {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)>;
-    fn emitted(&self, _ray: &Ray, _hit: &HitRecord) -> Vector3<f32> {
+    fn scatter(&self, _ray: &Ray, _hit: &HitRecord) -> Option<ScatterRecord> { // (Ray, Scatter direction, pdf)
+        None
+    }
+    fn scattering_pdf(&self, _ray: &Ray, _hit: &HitRecord, _ray_scatterd: &Ray) -> f32 {
+        0.0
+    }
+    fn emitted(&self, _ray_in: &Ray, _hit: &HitRecord) -> Vector3<f32> { 
         Vector3::new(0.0, 0.0, 0.0)
     }
     fn is_solid(&self) -> bool {
@@ -35,15 +48,30 @@ pub trait Material: Sync + Send {
     }
 }
 
+pub struct EmptyMaterial {}
+impl Material for EmptyMaterial {}
+
 pub struct Lambertian {
     pub albedo: Arc<dyn Texture>,
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, _: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
-        let scatter_direction = hit.normal + random_unit_vec();
-        let scattered = Ray::new(hit.p, scatter_direction);
-        Some((scattered, self.albedo.value(hit.uv, hit.p)))
+    fn scatter(&self, _: &Ray, hit: &HitRecord) -> Option<ScatterRecord> {
+        let w = hit.normal.normalize();
+        let pdf = CosinePdf { w };
+        // let direction = onb_local(&w, &random_cosine_direction());
+        // let scattered = Ray::new(hit.p, direction.normalize());
+        // let albedo = self.albedo.value(hit.uv, hit.p);
+        // let pdf = w.dot(&scattered.direction()) / f32::consts::PI;        
+        Some(ScatterRecord {
+            specular_ray: None,
+            attenuation: self.albedo.value(hit.uv, hit.p),
+            pdf: Some(Arc::new(pdf))
+        })
+    }
+    fn scattering_pdf(&self, _ray_in: &Ray, hit: &HitRecord, ray_scatterd: &Ray) -> f32 {
+        let cosine = hit.normal.dot(&ray_scatterd.direction().normalize());
+        if cosine < 0.0 { 0.0 } else { cosine / f32::consts::PI }
     }
 }
 
@@ -53,83 +81,92 @@ pub struct Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         let reflected = reflect(ray.direction().normalize(), hit.normal);
-        let scattered = Ray::new(hit.p, reflected + self.fuzz * random_vec_in_unit_sphere());
-        Some((scattered, self.albedo.value(hit.uv, hit.p)))
+        let specular_ray = Ray::new(hit.p, reflected + self.fuzz * random_vec_in_unit_sphere());
+        let attenuation = self.albedo.value(hit.uv, hit.p);
+        Some(ScatterRecord {
+            specular_ray: Some(specular_ray),
+            attenuation,
+            pdf: None
+        })
     }
 }
 
-pub struct Dielectric {
-    pub ref_idx: f32,
-    pub color: Vector3<f32>,
-    pub roughness: Arc<dyn Texture>,
-    pub density: f32,
-}
+// pub struct Dielectric {
+//     pub ref_idx: f32,
+//     pub color: Vector3<f32>,
+//     pub roughness: Arc<dyn Texture>,
+//     pub density: f32,
+// }
 
-impl Material for Dielectric {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
-        let attenuation: Vector3<f32>;
-        let etai_over_etat = if hit.front_face {
-            1.0 / self.ref_idx
-        } else {
-            self.ref_idx
-        };
+// impl Material for Dielectric {
+//     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<ScatterRecord> {
+//         let attenuation: Vector3<f32>;
+//         let etai_over_etat = if hit.front_face {
+//             1.0 / self.ref_idx
+//         } else {
+//             self.ref_idx
+//         };
 
-        let normal = (hit.normal + self.roughness.value(hit.uv, hit.p).x * random_vec_in_unit_sphere()).normalize();
+//         let normal = (hit.normal + self.roughness.value(hit.uv, hit.p).x * random_vec_in_unit_sphere()).normalize();
 
-        let unit_direction = ray.direction().normalize();
-        let cos_theta = (-unit_direction).dot(&normal).min(1.0);
-        let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
+//         let unit_direction = ray.direction().normalize();
+//         let cos_theta = (-unit_direction).dot(&normal).min(1.0);
+//         let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
 
-        if !hit.front_face {
-            // Color
-            let distance = (ray.origin() - hit.p).magnitude();
-            attenuation = (-self.color.map(|x| 1.0/x) * self.density * distance).map(f32::exp);
-        } else {
-            attenuation = vec(1.0, 1.0, 1.0);
-        }
+//         if !hit.front_face {
+//             // Color
+//             let distance = (ray.origin() - hit.p).magnitude();
+//             attenuation = (-self.color.map(|x| 1.0/x) * self.density * distance).map(f32::exp);
+//         } else {
+//             attenuation = vec(1.0, 1.0, 1.0);
+//         }
 
-        let scattered = if etai_over_etat * sin_theta > 1.0 {
-            let reflected = reflect(unit_direction, normal);
-            Ray::new(hit.p, reflected)
-        } else {
-            let reflect_prob = schlick(cos_theta, self.ref_idx);
-            let mut rng = thread_rng();
-            let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
-                reflect(unit_direction, normal)
-            } else {                                
-                refract(unit_direction, normal, etai_over_etat)
-            };
-            Ray::new(hit.p, refracted_or_reflected)
-        };
+//         let scattered = if etai_over_etat * sin_theta > 1.0 {
+//             let reflected = reflect(unit_direction, normal);
+//             Ray::new(hit.p, reflected)
+//         } else {
+//             let reflect_prob = schlick(cos_theta, self.ref_idx);
+//             let mut rng = thread_rng();
+//             let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
+//                 reflect(unit_direction, normal)
+//             } else {                                
+//                 refract(unit_direction, normal, etai_over_etat)
+//             };
+//             Ray::new(hit.p, refracted_or_reflected)
+//         };
 
-        Some((scattered, attenuation))
-    }
-}
+//         Some((scattered, attenuation, 0.0))
+//     }
+// }
 
-impl Default for Dielectric {
-    fn default() -> Dielectric {
-        Dielectric {
-            ref_idx: 1.52,
-            color: vec(1.0, 1.0, 1.0),
-            roughness: Arc::new(ConstantTex { color: vec_zero() }),
-            density: 0.0 //TODO: rename to absorption coefficient or something like that
-        }
-    }
-}
+// impl Default for Dielectric {
+//     fn default() -> Dielectric {
+//         Dielectric {
+//             ref_idx: 1.52,
+//             color: vec(1.0, 1.0, 1.0),
+//             roughness: Arc::new(ConstantTex { color: vec_zero() }),
+//             density: 0.0 //TODO: rename to absorption coefficient or something like that
+//         }
+//     }
+// }
 
 pub struct DiffuseLight {
     pub emit: Arc<dyn Texture>
 }
 
 impl Material for DiffuseLight {
-    fn scatter(&self, _ray: &Ray, _hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
+    fn scatter(&self, _ray: &Ray, _hit: &HitRecord) -> Option<ScatterRecord> {
         None
     }
 
     fn emitted(&self, _ray: &Ray, hit: &HitRecord) -> Vector3<f32> {
-        self.emit.value(hit.uv, hit.p)
+        if hit.front_face {
+            self.emit.value(hit.uv, hit.p)
+        } else {
+            vec_zero()
+        }
     }
 }
 
@@ -161,21 +198,22 @@ impl EnvironmentMaterial for Environment {
     }
 }
 
-pub struct Isotropic {
-    pub albedo: Arc<dyn Texture>
-}
+// pub struct Isotropic {
+//     pub albedo: Arc<dyn Texture>
+// }
 
-impl Material for Isotropic {
-    fn scatter(&self, _ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
-        Some((
-            Ray::new(hit.p, random_vec_in_unit_sphere()), 
-            self.albedo.value(hit.uv, hit.p)
-        ))
-    }
-    fn is_solid(&self) -> bool {
-        false
-    }
-}
+// impl Material for Isotropic {
+//     fn scatter(&self, _ray: &Ray, hit: &HitRecord) -> Option<ScatterRecord> {
+//         Some((
+//             Ray::new(hit.p, random_vec_in_unit_sphere()), 
+//             self.albedo.value(hit.uv, hit.p),
+//             0.0
+//         ))
+//     }
+//     fn is_solid(&self) -> bool {
+//         false
+//     }
+// }
 
 fn get_sphere_uv(p: Vector3<f32>) -> Vector2<f32> {
     let phi = p.z.atan2(p.x);
@@ -187,53 +225,53 @@ fn get_sphere_uv(p: Vector3<f32>) -> Vector2<f32> {
 
 
 
-pub struct DielectricSurfaceLambert {
-    pub ref_idx: f32,
-    pub albedo: Arc<dyn Texture>,
-    pub roughness: Arc<dyn Texture>,
-}
+// pub struct DielectricSurfaceLambert {
+//     pub ref_idx: f32,
+//     pub albedo: Arc<dyn Texture>,
+//     pub roughness: Arc<dyn Texture>,
+// }
 
-impl Material for DielectricSurfaceLambert {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<(Ray, Vector3<f32>)> {
-        let mut attenuation = vec_one();
-        let etai_over_etat = if hit.front_face {
-            1.0 / self.ref_idx
-        } else {
-            self.ref_idx
-        };
+// impl Material for DielectricSurfaceLambert {
+//     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<ScatterRecord> {
+//         let mut attenuation = vec_one();
+//         let etai_over_etat = if hit.front_face {
+//             1.0 / self.ref_idx
+//         } else {
+//             self.ref_idx
+//         };
 
-        let normal = (hit.normal + self.roughness.value(hit.uv, hit.p).x * random_vec_in_unit_sphere()).normalize();
+//         let normal = (hit.normal + self.roughness.value(hit.uv, hit.p).x * random_vec_in_unit_sphere()).normalize();
 
-        let unit_direction = ray.direction().normalize();
-        let cos_theta = (-unit_direction).dot(&normal).min(1.0);
-        let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
+//         let unit_direction = ray.direction().normalize();
+//         let cos_theta = (-unit_direction).dot(&normal).min(1.0);
+//         let sin_theta = (1.0 - cos_theta*cos_theta).sqrt();
 
-        let scattered = if etai_over_etat * sin_theta > 1.0 {
-            let reflected = reflect(unit_direction, normal);
-            Ray::new(hit.p, reflected)
-        } else {
-            let reflect_prob = schlick(cos_theta, self.ref_idx);
-            let mut rng = thread_rng();
-            let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
-                reflect(unit_direction, normal)
-            } else {                                
-                // Instead of refracting we fo Lambertian               
-                attenuation = self.albedo.value(hit.uv, hit.p);
-                hit.normal + random_unit_vec()
-            };
-            Ray::new(hit.p, refracted_or_reflected)
-        };
+//         let scattered = if etai_over_etat * sin_theta > 1.0 {
+//             let reflected = reflect(unit_direction, normal);
+//             Ray::new(hit.p, reflected)
+//         } else {
+//             let reflect_prob = schlick(cos_theta, self.ref_idx);
+//             let mut rng = thread_rng();
+//             let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
+//                 reflect(unit_direction, normal)
+//             } else {                                
+//                 // Instead of refracting we fo Lambertian               
+//                 attenuation = self.albedo.value(hit.uv, hit.p);
+//                 hit.normal + random_unit_vec()
+//             };
+//             Ray::new(hit.p, refracted_or_reflected)
+//         };
 
-        Some((scattered, attenuation))
-    }
-}
+//         Some((scattered, attenuation, 0.0))
+//     }
+// }
 
-impl Default for DielectricSurfaceLambert {
-    fn default() -> DielectricSurfaceLambert {
-        DielectricSurfaceLambert {
-            ref_idx: 1.52,
-            albedo: Arc::new(ConstantTex { color: vec_one() }),
-            roughness: Arc::new(ConstantTex { color: vec_zero() }),            
-        }
-    }
-}
+// impl Default for DielectricSurfaceLambert {
+//     fn default() -> DielectricSurfaceLambert {
+//         DielectricSurfaceLambert {
+//             ref_idx: 1.52,
+//             albedo: Arc::new(ConstantTex { color: vec_one() }),
+//             roughness: Arc::new(ConstantTex { color: vec_zero() }),            
+//         }
+//     }
+// }

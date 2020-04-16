@@ -10,8 +10,9 @@
 // pub mod cornell_box_scene;
 // pub mod cornell_box_vol;
 // pub mod cornell_box_mesh;
-pub mod cornell_box_texture_filtering;
-pub mod env_scene;
+// pub mod cornell_box_texture_filtering;
+// pub mod env_scene;
+pub mod cornell_box_scene;
 
 pub mod prefabs;
 
@@ -24,5 +25,6 @@ use crate::material::EnvironmentMaterial;
 pub struct Scene {
     pub objects:Arc<dyn Hittable>,
     pub environment: Arc<dyn EnvironmentMaterial>,
-    pub camera: Camera
+    pub camera: Camera,
+    pub lights: Arc<dyn Hittable>,
 }

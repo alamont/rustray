@@ -17,13 +17,17 @@ mod volume;
 mod triangle;
 mod mesh;
 mod utils;
+mod pdf;
 
 use cmd_lib::run_cmd;
 use hittable::{Hittable};
 use ray::Ray;
-use vec::{vec_zero, has_nan};
+use vec::{vec_zero, has_nan, vec2, vec3};
 use image::{ImageBuffer, hdr::{HDREncoder}, Rgb};
 use material::EnvironmentMaterial;
+use pdf::{Pdf, CosinePdf, HittablePdf, MixturePdf};
+use aarect::{AARectType, AARect};
+use material::{EmptyMaterial};
 use minifb::{Key, ScaleMode, Window, WindowOptions};
 use nalgebra::Vector3;
 use rand::{thread_rng, Rng};
@@ -39,14 +43,15 @@ use scenes::{
     // cornell_box_vol::cornell_box_vol,
     // cornell_box_mesh::cornell_box_mesh
     // cornell_box_texture_filtering::scene
-    env_scene::scene
+    // env_scene::scene
+    cornell_box_scene::scene
 };
 use std::{f32, fs, sync::Arc, io, time::Instant};
 use texture::hdr_image_loader;
 
 static mut RAY_COUNT: u32 = 0;
 
-const WIDTH: usize = 1000;
+const WIDTH: usize = 500;
 const HEIGHT: usize = 500;
 const HDR_OUTPUT: bool = true;
 const DENOISE: bool = true;
@@ -57,28 +62,62 @@ fn clamp(x: f32, min: f32, max: f32) -> f32 {
     x
 }
 
-fn ray_color(ray: &Ray, world: &Arc<dyn Hittable>, environment: &Arc<dyn EnvironmentMaterial>, depth: u32) -> Vector3<f32> {
+fn ray_color(
+    ray: &Ray, 
+    world: &Arc<dyn Hittable>, 
+    environment: &Arc<dyn EnvironmentMaterial>,
+    lights: &Arc<dyn Hittable>,
+    depth: u32) -> Vector3<f32> {
+        
     unsafe {
         RAY_COUNT += 1;
     }
+
+    // Bounce limit exceeded
     if depth <= 0 {
         return Vector3::new(0.0, 0.0, 0.0);
     }
 
-    if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
-        if let Some((new_ray, attenuation)) = hit_rec.material.scatter(&ray, &hit_rec) {
-            if has_nan(&attenuation) {
-                return vec_zero();
-            }
-            return attenuation.component_mul(&ray_color(&new_ray, world, environment, depth - 1));
-        }
-        let emitted = hit_rec.material.emitted(ray, &hit_rec);
+    if let Some(hit_rec) = world.hit(&ray, 0.001, f32::MAX) {
+
+        let mut emitted = hit_rec.material.emitted(&ray, &hit_rec);
         if has_nan(&emitted) {
-            return vec_zero();
+            emitted = vec_zero();
         }
+
+        // Scatter
+        if let Some(scatter_record) = hit_rec.material.scatter(&ray, &hit_rec) {
+            if let Some(specular_ray) = scatter_record.specular_ray {
+                return scatter_record.attenuation.component_mul(&ray_color(&specular_ray, world, environment, lights, depth - 1));
+            }
+            let attenuation = scatter_record.attenuation;
+            if has_nan(&attenuation) {
+                return emitted;
+            }
+
+            let mixture_pdf: MixturePdf;
+            let hittable_pdf = Arc::new(HittablePdf { origin: hit_rec.p, hittable: lights.clone() });
+            if let Some(pdf) = scatter_record.pdf {
+                mixture_pdf = MixturePdf::new_uniform(vec![hittable_pdf, pdf]);
+            } else {
+                mixture_pdf = MixturePdf::new_uniform(vec![hittable_pdf]);
+            }
+
+            let scattered_ray = Ray::new(hit_rec.p, mixture_pdf.generate());
+            let pdf_val = mixture_pdf.value(scattered_ray.direction());
+            if pdf_val.is_nan() { 
+                return emitted;
+            }
+
+            return emitted + (attenuation * hit_rec.material.scattering_pdf(&ray, &hit_rec, &scattered_ray))
+                .component_mul(&ray_color(&scattered_ray, world, environment, &lights, depth - 1)) / pdf_val;
+        }
+
         return emitted;
+
     } else {
-        let emitted = environment.emit(ray);
+        // Retrun environment if ray hits nothing
+        let emitted = environment.emit(&ray);
         if has_nan(&emitted) {
             return vec_zero();
         }
@@ -88,7 +127,8 @@ fn ray_color(ray: &Ray, world: &Arc<dyn Hittable>, environment: &Arc<dyn Environ
 
 fn ray_albedo(ray: &Ray, world: &Arc<dyn Hittable>) -> Vector3<f32> {
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
-        if let Some((_new_ray, attenuation)) = hit_rec.material.scatter(&ray, &hit_rec) {
+        if let Some(scatter_record) = hit_rec.material.scatter(&ray, &hit_rec) {
+            let attenuation = scatter_record.attenuation;
             return attenuation;
         }
     }
@@ -147,6 +187,7 @@ fn main() {
     let world = scene.objects;
     let environment = scene.environment;
     let cam = scene.camera;
+    let lights = scene.lights;
 
     
     let now = Instant::now();
@@ -162,7 +203,7 @@ fn main() {
                         let u = (x as f32 + rng.gen::<f32>()) / nx as f32;
                         let v = (ny as f32 - (y as f32 + rng.gen::<f32>())) / ny as f32;
                         let ray = cam.get_ray(u, v);
-                        let col = ray_color(&ray, &world, &environment, max_depth);
+                        let mut col = ray_color(&ray, &world, &environment, &lights, max_depth);
                         let offset = ((y * nx + x) * 3) as usize;
                         vec![
                             col.x + image_buf[offset],

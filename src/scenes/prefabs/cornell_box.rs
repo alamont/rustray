@@ -9,11 +9,11 @@ use crate::bvh::BVHNode;
 use crate::camera::Camera;
 
 
-pub fn cornell_box() ->Arc<dyn Hittable> {
+pub fn cornell_box() -> (Arc<dyn Hittable>, Arc<dyn Hittable>) {
     let red = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.65, 0.05, 0.05) })});
     let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
     let green = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});    
-    let light = Arc::new(DiffuseLight { emit: Arc::new(ConstantTex { color: vec3(7.0, 7.0, 7.0) })});
+    let light = Arc::new(DiffuseLight { emit: Arc::new(ConstantTex { color: vec3(14.0, 14.0, 14.0) })});
 
     let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
 
@@ -38,13 +38,14 @@ pub fn cornell_box() ->Arc<dyn Hittable> {
         material: white.clone(),
         rect_type: XZ
     }));
-    objects.push(Arc::new(FlipFace::new(AARect { 
-        xy0: vec2(-113.0, -113.0), 
-        xy1: vec2(113.0, 113.0),
+    let light = Arc::new(AARect { 
+        xy0: vec2(-65.0, -65.0), 
+        xy1: vec2(65.0, 65.0),
         k: 554.0,
         material: light.clone(),
         rect_type: XZ
-    })));
+    });
+    objects.push(light.clone());
     objects.push(Arc::new(AARect { 
         xy0: vec2(-278.0, -278.0), 
         xy1: vec2(278.0, 278.0),
@@ -60,7 +61,7 @@ pub fn cornell_box() ->Arc<dyn Hittable> {
         rect_type: XY
     })));
 
-    BVHNode::build(objects, 0)
+    (BVHNode::build(objects, 0), light.clone())
 }
 
 pub fn cornell_box_camera() -> Camera {

@@ -1,6 +1,7 @@
 use crate::aabb::AABB;
 use crate::hittable::{HitRecord, Hittable};
-use crate::material::{Material, Isotropic};
+use crate::material::{Material};
+// use crate::material::{Material, Isotropic};
 use crate::texture::{ConstantTex, Texture, CheckerTex};
 use crate::ray::Ray;
 use crate::vec::{vec2, vec3, vec_one, vec_zero};

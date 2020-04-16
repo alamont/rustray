@@ -4,7 +4,7 @@ use std::{sync::Arc, f32};
 use crate::aabb::{surrounding_box, AABB};
 use crate::material::Material;
 use crate::ray::Ray;
-use crate::vec::{vec, vec_zero, deg_to_rad};
+use crate::vec::{vec, vec_zero, deg_to_rad, vec3};
 
 pub struct HitRecord {
     pub t: f32,
@@ -52,8 +52,13 @@ impl HitRecord {
 
 pub trait Hittable: Sync + Send {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
-
     fn bounding_box(&self) -> Option<AABB>;
+    fn pdf_value(&self, _origin: &Vector3<f32>, _direction: &Vector3<f32>) -> f32 {
+        0.0
+    }
+    fn random(&self, _origin: &Vector3<f32>) -> Vector3<f32> {
+        vec3(1.0, 0.0, 0.0)
+    }
 }
 
 #[derive(Default)]
