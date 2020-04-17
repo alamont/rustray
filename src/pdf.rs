@@ -1,5 +1,5 @@
 use crate::hittable::Hittable;
-use crate::vec::{onb_local, random_cosine_direction, vec3, vec_zero};
+use crate::vec::{onb_local, random_cosine_direction, vec3, vec_zero, random_unit_vec};
 use nalgebra::{Vector2, Vector3};
 use rand::{thread_rng, Rng};
 use std::{f32, sync::Arc};
@@ -34,6 +34,16 @@ impl Pdf for CosinePdf {
     }
     fn generate(&self) -> Vector3<f32> {
         onb_local(&self.w, &random_cosine_direction())
+    }
+}
+
+pub struct UniformPdf { }
+impl Pdf for UniformPdf { 
+    fn value(&self, _direction: Vector3<f32>) -> f32 {
+        1.0 / (2.0 * f32::consts::PI)
+    }
+    fn generate(&self) -> Vector3<f32> {
+        random_unit_vec()
     }
 }
 

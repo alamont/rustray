@@ -46,6 +46,6 @@ pub fn scene() -> Scene {
         camera: cornell_box_camera(),
         objects: BVHNode::build(objects, 0),
         environment: cornell_box_environment(),
-        lights: lights
+        mis_objects: lights
     }
 }

@@ -9,7 +9,7 @@ use crate::bvh::BVHNode;
 use crate::camera::Camera;
 
 
-pub fn cornell_box() -> (Arc<dyn Hittable>, Arc<dyn Hittable>) {
+pub fn cornell_box() -> (Arc<dyn Hittable>, Vec<Arc<dyn Hittable>>) {
     let red = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.65, 0.05, 0.05) })});
     let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
     let green = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});    
@@ -61,7 +61,7 @@ pub fn cornell_box() -> (Arc<dyn Hittable>, Arc<dyn Hittable>) {
         rect_type: XY
     })));
 
-    (BVHNode::build(objects, 0), light.clone())
+    (BVHNode::build(objects, 0), vec![light.clone()])
 }
 
 pub fn cornell_box_camera() -> Camera {

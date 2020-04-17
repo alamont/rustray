@@ -30,7 +30,7 @@ pub fn scene() -> Scene {
 
     let earth_image = image::open("assets/topo.jpg").unwrap().to_rgb();
     let decoder = image::hdr::HdrDecoder::new(io::BufReader::new(
-        fs::File::open("assets/carpentry_shop_02_4k.hdr").unwrap(),
+        fs::File::open("assets/veranda_8k.hdr").unwrap(),
     ))
     .unwrap();
 
@@ -120,5 +120,6 @@ pub fn scene() -> Scene {
         camera,
         objects: BVHNode::build(objects, 0),
         environment: env_material,
+        mis_objects: vec![]
     }
 }

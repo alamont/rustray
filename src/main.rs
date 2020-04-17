@@ -36,22 +36,21 @@ use scenes::{
     Scene,
     // random_scene_bvh::random_scene_bvh,
     // random_scene::random_scene,
-    // // dielectric_scene::dielectric_scene,
+    // dielectric_scene::dielectric_scene,
     // earth_scene::earth_scene,
     // random_scene_light::random_scene_light,
     // cornell_box_scene::cornell_box,
     // cornell_box_vol::cornell_box_vol,
     // cornell_box_mesh::cornell_box_mesh
     // cornell_box_texture_filtering::scene
-    // env_scene::scene
-    cornell_box_scene::scene
+    env_scene::scene
+    // cornell_box_scene::scene
 };
 use std::{f32, fs, sync::Arc, io, time::Instant};
-use texture::hdr_image_loader;
 
 static mut RAY_COUNT: u32 = 0;
 
-const WIDTH: usize = 500;
+const WIDTH: usize = 1000;
 const HEIGHT: usize = 500;
 const HDR_OUTPUT: bool = true;
 const DENOISE: bool = true;
@@ -64,9 +63,9 @@ fn clamp(x: f32, min: f32, max: f32) -> f32 {
 
 fn ray_color(
     ray: &Ray, 
-    world: &Arc<dyn Hittable>, 
-    environment: &Arc<dyn EnvironmentMaterial>,
-    lights: &Arc<dyn Hittable>,
+    world: Arc<dyn Hittable>, 
+    environment: Arc<dyn EnvironmentMaterial>,
+    mis_objects: &Vec<Arc<dyn Hittable>>,
     depth: u32) -> Vector3<f32> {
         
     unsafe {
@@ -87,30 +86,33 @@ fn ray_color(
 
         // Scatter
         if let Some(scatter_record) = hit_rec.material.scatter(&ray, &hit_rec) {
+            // If the ray is specualar don't do the multiple importance sampling
             if let Some(specular_ray) = scatter_record.specular_ray {
-                return scatter_record.attenuation.component_mul(&ray_color(&specular_ray, world, environment, lights, depth - 1));
+                return scatter_record.attenuation.component_mul(&ray_color(&specular_ray, world, environment, mis_objects, depth - 1));
             }
             let attenuation = scatter_record.attenuation;
             if has_nan(&attenuation) {
                 return emitted;
             }
-
-            let mixture_pdf: MixturePdf;
-            let hittable_pdf = Arc::new(HittablePdf { origin: hit_rec.p, hittable: lights.clone() });
+            let mut pdfs: Vec<Arc<dyn Pdf>> = Vec::new();
+            if mis_objects.len() > 0 {                
+                for mo in mis_objects.iter() {
+                    pdfs.push(Arc::new(HittablePdf { origin: hit_rec.p, hittable: mo.clone() }));
+                }
+            }
             if let Some(pdf) = scatter_record.pdf {
-                mixture_pdf = MixturePdf::new_uniform(vec![hittable_pdf, pdf]);
-            } else {
-                mixture_pdf = MixturePdf::new_uniform(vec![hittable_pdf]);
+                pdfs.push(pdf);
             }
-
+            
+            let mixture_pdf = MixturePdf::new_uniform(pdfs);
             let scattered_ray = Ray::new(hit_rec.p, mixture_pdf.generate());
-            let pdf_val = mixture_pdf.value(scattered_ray.direction());
-            if pdf_val.is_nan() { 
-                return emitted;
-            }
+            let pdf_val = mixture_pdf.value(scattered_ray.direction());            
+            // if pdf_val.is_nan() { 
+            //     return emitted;
+            // }
 
             return emitted + (attenuation * hit_rec.material.scattering_pdf(&ray, &hit_rec, &scattered_ray))
-                .component_mul(&ray_color(&scattered_ray, world, environment, &lights, depth - 1)) / pdf_val;
+                .component_mul(&ray_color(&scattered_ray, world, environment, mis_objects, depth - 1)) / pdf_val;
         }
 
         return emitted;
@@ -187,7 +189,7 @@ fn main() {
     let world = scene.objects;
     let environment = scene.environment;
     let cam = scene.camera;
-    let lights = scene.lights;
+    let mis_objects = scene.mis_objects;
 
     
     let now = Instant::now();
@@ -203,7 +205,7 @@ fn main() {
                         let u = (x as f32 + rng.gen::<f32>()) / nx as f32;
                         let v = (ny as f32 - (y as f32 + rng.gen::<f32>())) / ny as f32;
                         let ray = cam.get_ray(u, v);
-                        let mut col = ray_color(&ray, &world, &environment, &lights, max_depth);
+                        let col = ray_color(&ray, world.clone(), environment.clone(), &mis_objects, max_depth);
                         let offset = ((y * nx + x) * 3) as usize;
                         vec![
                             col.x + image_buf[offset],

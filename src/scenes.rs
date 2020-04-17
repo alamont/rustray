@@ -11,7 +11,7 @@
 // pub mod cornell_box_vol;
 // pub mod cornell_box_mesh;
 // pub mod cornell_box_texture_filtering;
-// pub mod env_scene;
+pub mod env_scene;
 pub mod cornell_box_scene;
 
 pub mod prefabs;
@@ -26,5 +26,5 @@ pub struct Scene {
     pub objects:Arc<dyn Hittable>,
     pub environment: Arc<dyn EnvironmentMaterial>,
     pub camera: Camera,
-    pub lights: Arc<dyn Hittable>,
+    pub mis_objects: Vec<Arc<dyn Hittable>>,
 }

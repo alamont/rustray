@@ -197,25 +197,3 @@ impl<T: image::Primitive + Sync + Send + PixelValue> Texture for ImageTexture<T>
         }
     }
 }
-
-// impl ImageTexture<T> {
-//     // fn get_pixel(&self, i: u32, j: u32) -> Vector3<f32> {
-
-//     //     self.data.
-//     //     let r = self.data[(3 * i + 3 * self.width * j + 0) as usize] as f32 / 255.0;
-//     //     let g = self.data[(3 * i + 3 * self.width * j + 1) as usize] as f32 / 255.0;
-//     //     let b = self.data[(3 * i + 3 * self.width * j + 2) as usize] as f32 / 255.0;
-//     //     Vector3::new(r, g, b)
-//     // }
-//     fn rgb8_to_rgb32(pixel: image::Rgb<u8>) -> Vector3<f32> {
-//         Vector3::new(
-//             pixel[0] as f32 / 255.0,
-//             pixel[1] as f32 / 255.0,
-//             pixel[2] as f32 / 255.0
-//         )
-//     }
-// }
-
-pub fn hdr_image_loader(image_path: String) {
-
-}
