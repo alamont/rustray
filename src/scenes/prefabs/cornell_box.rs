@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::hittable::{Hittable, FlipFace, Transform};
-use crate::material::{Lambertian, DiffuseLight, Environment};
+use crate::material::{Lambertian, DiffuseLight, ConstantEnvironment};
 use crate::aarect::{AARect, AARectType::*};
 use crate::texture::{ConstantTex};
 use crate::vec::{vec2, vec3, vec_zero};
@@ -76,6 +76,6 @@ pub fn cornell_box_camera() -> Camera {
     Camera::new(lookfrom, lookat, vup, vfov, aspect, aperture, dist_to_focus)
 }
 
-pub fn cornell_box_environment() -> Arc<Environment> {
-    Arc::new(Environment { emit: Arc::new(ConstantTex { color: vec_zero() })})
+pub fn cornell_box_environment() -> Arc<ConstantEnvironment> {
+    Arc::new(ConstantEnvironment { emit: vec_zero() })
 }

@@ -26,28 +26,13 @@ pub fn scene() -> Scene {
         ..Dielectric::default()
     });
     let aluminium  = Arc::new(Metal { albedo: Arc::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
-
+    let red = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.65, 0.05, 0.05) })});
+    let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
+    let green = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});    
 
     let earth_image = image::open("assets/topo.jpg").unwrap().to_rgb();
-    let decoder = image::hdr::HdrDecoder::new(io::BufReader::new(
-        fs::File::open("assets/veranda_8k.hdr").unwrap(),
-    ))
-    .unwrap();
 
-    let env_image = ImageBuffer::from_raw(
-        decoder.metadata().width,
-        decoder.metadata().height,
-        decoder.read_image_hdr().unwrap().iter().flat_map(|p| vec![p[0], p[1], p[2]]).collect::<Vec<f32>>()
-    ).unwrap();
-
-    let earth_material = Arc::new(Lambertian {
-        albedo: Arc::new(
-            ImageTexture::new(earth_image.clone())
-                .sampler(Bilinear)
-                .wrap_mode(Clamp),
-        ),
-    });
-    let earth_material_new = Arc::new(DielectricSurfaceLambert{
+    let earth_material = Arc::new(DielectricSurfaceLambert{
         albedo: Arc::new(
             ImageTexture::new(earth_image.clone())
                 .sampler(Bilinear)
@@ -56,65 +41,57 @@ pub fn scene() -> Scene {
         ..DielectricSurfaceLambert::default()
     });
 
-    let env_material = Arc::new(Environment {
-        emit: Arc::new(
-            ImageTexture::new(env_image)
-                .sampler(Bilinear)
-                .wrap_mode(Clamp),
-        ),
-    });
-    let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
+    let env_material = Arc::new(Environment::new("assets/spiaggia_di_mondello_4k.hdr".to_string()));
+    let sand = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(244.0/255.99, 219.0/255.99, 154.0/255.99) })});
 
     objects.push(Arc::new(AARect { 
         xy0: vec2(-10000.0, -10000.0), 
         xy1: vec2(10000.0, 10000.0),
         k: 0.0,
-        material: white.clone(),
+        material: sand.clone(),
         rect_type: XZ
     }));
 
-    objects.push(Arc::new(Transform::new(
-        Sphere::new(vec_zero(), 200.0, glass.clone()),
-        vec3(-450.0, 200.0, -100.0),
-        vec_zero(),
-    )));
-
-    // This doesn't work properly becuase de dieletric assumes and interface
-    // with a medium with ref_idx ~1 (like air)
     // objects.push(Arc::new(Transform::new(
-    //     Sphere::new(vec_zero(), 199.999, earth_material),
-    //     vec3(0.0, 200.0, -100.0),
+    //     Sphere::new(vec_zero(), 200.0, red.clone()),
+    //     vec3(-450.0, 200.0, -100.0),
     //     vec_zero(),
     // )));
+
     // objects.push(Arc::new(Transform::new(
-    //     Sphere::new(vec_zero(), 200.0, glass.clone()),
+    //     Sphere::new(vec_zero(), 200.0, white.clone()),
     //     vec3(0.0, 200.0, -100.0),
     //     vec_zero(),
     // )));
 
+    // objects.push(Arc::new(Transform::new(
+    //     Sphere::new(vec_zero(), 200.0, green.clone()),
+    //     vec3(450.0, 200.0, -100.0),
+    //     vec_zero(),
+    // )));
 
-    objects.push(Arc::new(Transform::new(
-        Sphere::new(vec_zero(), 200.0, earth_material_new.clone()),
-        vec3(0.0, 200.0, -100.0),
-        vec_zero(),
-    )));
+    objects.push(Arc::new(
+        Sphere::new(vec3(-450.0, 200.0, -100.0), 200.0, glass.clone()),
+    ));
 
-    objects.push(Arc::new(Transform::new(
-        Sphere::new(vec_zero(), 200.0, aluminium.clone()),
-        vec3(450.0, 200.0, -100.0),
-        vec_zero(),
-    )));
+    objects.push(Arc::new(
+        Sphere::new(vec3(0.0, 200.0, -100.0), 200.0, earth_material.clone()),
+    ));
 
-    let lookfrom = vec3(0.0, 500.0, 1500.0);
+    objects.push(Arc::new(
+        Sphere::new(vec3(450.0, 200.0, -100.0), 200.0, aluminium.clone()),
+    ));
+
+    let lookfrom = vec3(0.0, 1200.0, 4500.0);
     let lookat = vec3(0.0, 278.0, 0.0);
     let vup = vec3(0.0, 1.0, 0.0);
     let dist_to_focus = (lookfrom-lookat).magnitude();
-    let aperture = 100.0;
-    let vfov = 30.0;
+    let aperture = 50.0;
+    let vfov = 10.0;
     let aspect = 2.0;
 
     let mut camera = Camera::new(lookfrom, lookat, vup, vfov, aspect, aperture, dist_to_focus);
-    camera.aperture_shape = ApertureShape::Hexagon;
+    camera.aperture_shape = ApertureShape::Circle;
 
     Scene {
         camera,

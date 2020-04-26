@@ -105,3 +105,13 @@ pub fn random_cosine_direction() -> Vector3<f32> {
 
     vec3(x, y, z)
 }
+
+
+pub fn get_sphere_uv(p: &Vector3<f32>) -> Vector2<f32> {
+    let phi = p.z.atan2(p.x);
+    let theta = p.y.asin();
+    let u = 1.0 - (phi + f32::consts::PI) / (2.0 * f32::consts::PI);
+    let v = (theta + f32::consts::PI / 2.0) / f32::consts::PI;
+    Vector2::new(u, v)
+}
+

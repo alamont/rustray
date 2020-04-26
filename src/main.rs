@@ -25,7 +25,7 @@ use ray::Ray;
 use vec::{vec_zero, has_nan, vec2, vec3};
 use image::{ImageBuffer, hdr::{HDREncoder}, Rgb};
 use material::EnvironmentMaterial;
-use pdf::{Pdf, CosinePdf, HittablePdf, MixturePdf};
+use pdf::{Pdf, CosinePdf, HittablePdf, MixturePdf, EnvPdf};
 use aarect::{AARectType, AARect};
 use material::{EmptyMaterial};
 use minifb::{Key, ScaleMode, Window, WindowOptions};
@@ -103,6 +103,7 @@ fn ray_color(
             if let Some(pdf) = scatter_record.pdf {
                 pdfs.push(pdf);
             }
+            pdfs.push(Arc::new(EnvPdf { environment: environment.clone() }));
             
             let mixture_pdf = MixturePdf::new_uniform(pdfs);
             let scattered_ray = Ray::new(hit_rec.p, mixture_pdf.generate());
@@ -112,13 +113,13 @@ fn ray_color(
             // }
 
             return emitted + (attenuation * hit_rec.material.scattering_pdf(&ray, &hit_rec, &scattered_ray))
-                .component_mul(&ray_color(&scattered_ray, world, environment, mis_objects, depth - 1)) / pdf_val;
+                .component_mul(&ray_color(&scattered_ray, world, environment.clone(), mis_objects, depth - 1)) / pdf_val;
         }
 
         return emitted;
 
     } else {
-        // Retrun environment if ray hits nothing
+        // Return environment if ray hits nothing
         let emitted = environment.emit(&ray);
         if has_nan(&emitted) {
             return vec_zero();

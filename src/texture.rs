@@ -95,9 +95,9 @@ pub struct ImageTexture<T: image::Primitive + Sync + Send + PixelValue>
 where
     T: 'static,
 {
-    image_buffer: ImageBuffer<image::Rgb<T>, Vec<T>>,
-    width: u32,
-    height: u32,
+    pub image_buffer: ImageBuffer<image::Rgb<T>, Vec<T>>,
+    pub width: u32,
+    pub height: u32,
     _sampler: Sampler, 
     _wrap_mode: WrapMode,
 }
@@ -156,19 +156,11 @@ impl<T: image::Primitive + Sync + Send + PixelValue> Texture for ImageTexture<T>
             }
         }
 
-
         let x = u * (self.width - 1) as f32;
         let y = (1.0 - v) * (self.height - 1) as f32;
 
-
         let i = x as u32;
         let j = y as u32;
-        // if i > self.width - 1 {
-        //     i = self.width - 1
-        // }
-        // if j > self.height - 1 {
-        //     j = self.height - 1
-        // }
 
         match &self._sampler {
             Nearest => self.get_pixel(i, j),

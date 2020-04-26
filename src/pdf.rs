@@ -1,5 +1,6 @@
 use crate::hittable::Hittable;
 use crate::vec::{onb_local, random_cosine_direction, vec3, vec_zero, random_unit_vec};
+use crate::material::EnvironmentMaterial;
 use nalgebra::{Vector2, Vector3};
 use rand::{thread_rng, Rng};
 use std::{f32, sync::Arc};
@@ -40,7 +41,7 @@ impl Pdf for CosinePdf {
 pub struct UniformPdf { }
 impl Pdf for UniformPdf { 
     fn value(&self, _direction: Vector3<f32>) -> f32 {
-        1.0 / (2.0 * f32::consts::PI)
+        1.0 / (4.0 * f32::consts::PI)
     }
     fn generate(&self) -> Vector3<f32> {
         random_unit_vec()
@@ -58,6 +59,19 @@ impl Pdf for HittablePdf {
     }
     fn generate(&self) -> Vector3<f32> {
         self.hittable.random(&self.origin)
+    }
+}
+
+pub struct EnvPdf { 
+    pub environment: Arc<dyn EnvironmentMaterial>
+}
+
+impl Pdf for EnvPdf {
+    fn value(&self, direction: Vector3<f32>) -> f32 {
+        self.environment.pdf_value(&direction)
+    }
+    fn generate(&self) -> Vector3<f32> {
+        self.environment.random()
     }
 }
 
