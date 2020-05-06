@@ -28,10 +28,11 @@ use material::EnvironmentMaterial;
 use pdf::{Pdf, CosinePdf, HittablePdf, MixturePdf, EnvPdf};
 use aarect::{AARectType, AARect};
 use material::{EmptyMaterial};
-use minifb::{Key, ScaleMode, Window, WindowOptions};
-use nalgebra::Vector3;
+use minifb::{Key, ScaleMode, Window, WindowOptions, MouseMode, MouseButton};
+use nalgebra::{Vector3, UnitQuaternion, Point3, Translation3};
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
+use kiss3d;
 use scenes::{
     Scene,
     // random_scene_bvh::random_scene_bvh,
@@ -46,7 +47,7 @@ use scenes::{
     env_scene::scene
     // cornell_box_scene::scene
 };
-use std::{f32, fs, sync::Arc, io, time::Instant};
+use std::{f32, fs, sync::{Arc, mpsc, mpsc::{Sender, Receiver}}, io, time::{Instant, Duration}, thread};
 
 static mut RAY_COUNT: u32 = 0;
 
@@ -54,6 +55,13 @@ const WIDTH: usize = 1000;
 const HEIGHT: usize = 500;
 const HDR_OUTPUT: bool = true;
 const DENOISE: bool = true;
+const DEBUG_WINDOW: bool = false;
+
+#[derive(Clone)]
+pub enum PathDebugMsg  {
+    Ray(Vector3<f32>, Vector3<f32>),
+    Hit(Vector3<f32>, Vector3<f32>)
+}
 
 fn clamp(x: f32, min: f32, max: f32) -> f32 {
     if x < min { return min; }
@@ -66,7 +74,8 @@ fn ray_color(
     world: Arc<dyn Hittable>, 
     environment: Arc<dyn EnvironmentMaterial>,
     mis_objects: &Vec<Arc<dyn Hittable>>,
-    depth: u32) -> Vector3<f32> {
+    depth: u32,
+    _tx: Option<&Sender<PathDebugMsg>>) -> Vector3<f32> {
         
     unsafe {
         RAY_COUNT += 1;
@@ -77,7 +86,14 @@ fn ray_color(
         return Vector3::new(0.0, 0.0, 0.0);
     }
 
+
     if let Some(hit_rec) = world.hit(&ray, 0.001, f32::MAX) {
+
+        if let Some(tx) = _tx {
+            tx.send(PathDebugMsg::Ray(ray.origin(), hit_rec.p));
+            tx.send(PathDebugMsg::Hit(hit_rec.p, hit_rec.normal));
+        }
+    
 
         let mut emitted = hit_rec.material.emitted(&ray, &hit_rec);
         if has_nan(&emitted) {
@@ -87,8 +103,9 @@ fn ray_color(
         // Scatter
         if let Some(scatter_record) = hit_rec.material.scatter(&ray, &hit_rec) {
             // If the ray is specualar don't do the multiple importance sampling
-            if let Some(specular_ray) = scatter_record.specular_ray {
-                return scatter_record.attenuation.component_mul(&ray_color(&specular_ray, world, environment, mis_objects, depth - 1));
+            if let Some(mut specular_ray) = scatter_record.specular_ray {
+                specular_ray.debug = ray.debug;
+                return scatter_record.attenuation.component_mul(&ray_color(&specular_ray, world, environment, mis_objects, depth - 1, _tx));
             }
             let attenuation = scatter_record.attenuation;
             if has_nan(&attenuation) {
@@ -103,23 +120,20 @@ fn ray_color(
             if let Some(pdf) = scatter_record.pdf {
                 pdfs.push(pdf);
             }
-            pdfs.push(Arc::new(EnvPdf { environment: environment.clone() }));
+            // pdfs.push(Arc::new(EnvPdf { environment: environment.clone() }));
             
             let mixture_pdf = MixturePdf::new_uniform(pdfs);
-            let scattered_ray = Ray::new(hit_rec.p, mixture_pdf.generate());
+            let mut scattered_ray = Ray::new(hit_rec.p, mixture_pdf.generate());
+            scattered_ray.debug = ray.debug;
             let pdf_val = mixture_pdf.value(scattered_ray.direction());            
-            // if pdf_val.is_nan() { 
-            //     return emitted;
-            // }
 
             return emitted + (attenuation * hit_rec.material.scattering_pdf(&ray, &hit_rec, &scattered_ray))
-                .component_mul(&ray_color(&scattered_ray, world, environment.clone(), mis_objects, depth - 1)) / pdf_val;
+                .component_mul(&ray_color(&scattered_ray, world, environment.clone(), mis_objects, depth - 1, _tx)) / pdf_val;
         }
-
-        return emitted;
+        emitted
 
     } else {
-        // Return environment if ray hits nothing
+        // Return environment if ray hits nothing        
         let emitted = environment.emit(&ray);
         if has_nan(&emitted) {
             return vec_zero();
@@ -127,6 +141,7 @@ fn ray_color(
         emitted
     }
 }
+
 
 fn ray_albedo(ray: &Ray, world: &Arc<dyn Hittable>) -> Vector3<f32> {
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
@@ -163,18 +178,66 @@ fn display() -> Window {
     window
 }
 
-fn main() {
+fn debug_display(rx: Receiver<PathDebugMsg>) {
+    thread::spawn(move || {
+        // some work here
+    
+        let mut kiss_window = kiss3d::window::Window::new("Kiss3d: cube");
+        // let mut c = kiss_window.add_cube(1.0, 1.0, 1.0);
+        // kiss_window.add_sphere(r)
 
-    // let image = image::open("assets/umhlanga_sunrise_4k.hdr")
-    //         .expect("Can't find image")
-    //         .to_rgb();
-    //         image.
-    // return None;
+        // c.set_color(1.0, 0.0, 0.0);
+
+        let mut sphere = kiss_window.add_sphere(200.0);
+        sphere.append_translation(&Translation3::new(0.0, 200.0, -100.0));
+
+        sphere.set_color(0.2, 0.2, 0.2);
+        sphere.set_points_size(10.0);
+        sphere.set_lines_width(1.0);
+        sphere.set_surface_rendering_activation(false);
+
+
+        kiss_window.set_light(kiss3d::light::Light::StickToCamera);
+        kiss_window.set_point_size(10.0);
+
+        // let rot: UnitQuaternion<f32> = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), 0.014);
+        let mut lines = Vec::new();
+        let mut hits = Vec::new();
+
+        while kiss_window.render() {
+            // c.prepend_to_local_rotation(&rot);
+            if let Ok(received) = rx.try_recv() {
+                match received {
+                    PathDebugMsg::Ray(o, d) => {
+                        lines.push((Point3::from(o), Point3::from(d), Point3::new(0.0, 1.0, 0.0)));                        
+                    },
+                    PathDebugMsg::Hit(p, n) => {
+                        hits.push((Point3::from(p), Point3::from(n)));
+                    }
+                }                
+            }
+            lines.iter().for_each(|line| {
+                kiss_window.draw_line(&line.0, &line.1, &line.2);
+            });
+            hits.iter().for_each(|h| {
+                kiss_window.draw_point(&h.0, &Point3::new(1.0, 0.0, 0.0));
+                kiss_window.draw_line(&h.0, &Point3::from(h.0 + Vector3::new(h.1.x, h.1.y, h.1.z) * 10.0), &Point3::new(0.0, 0.0, 1.0));          
+            });
+        }
+    });
+}
+
+fn main() {
 
     let nx: u32 = WIDTH as u32;
     let ny: u32 = HEIGHT as u32;
     let ns = 10000;
     let max_depth = 50;
+    let (tx, rx): (Sender<PathDebugMsg>, Receiver<PathDebugMsg>) = mpsc::channel();
+
+    if DEBUG_WINDOW {   
+        debug_display(rx);
+    }
 
     let mut window = display();  
     let mut u32_buffer: Vec<u32>;
@@ -205,8 +268,8 @@ fn main() {
                     .flat_map(|x| {
                         let u = (x as f32 + rng.gen::<f32>()) / nx as f32;
                         let v = (ny as f32 - (y as f32 + rng.gen::<f32>())) / ny as f32;
-                        let ray = cam.get_ray(u, v);
-                        let col = ray_color(&ray, world.clone(), environment.clone(), &mis_objects, max_depth);
+                        let ray = cam.get_ray(u, v);                        
+                        let col = ray_color(&ray, world.clone(), environment.clone(), &mis_objects, max_depth, None);
                         let offset = ((y * nx + x) * 3) as usize;
                         vec![
                             col.x + image_buf[offset],
@@ -227,23 +290,58 @@ fn main() {
             .map(|v| ((v[0] as u32) << 16) | ((v[1] as u32) << 8) | v[2] as u32)
             .collect();
 
-        window
-            .update_with_buffer(&u32_buffer, WIDTH, HEIGHT)
-            .unwrap();
-
         unsafe {
             println!("samples: {}, rays: {:.2} M", n, RAY_COUNT as f32 / 1e6);
         }
         completed_samples += 1;
+        let mut paused = false;
+        let mut exit = false;
 
-        if !window.is_open() || window.is_key_down(Key::Escape) || window.is_key_released(Key::Escape) {
+        loop {
+            window
+                .update_with_buffer(&u32_buffer, WIDTH, HEIGHT)
+                .unwrap();        
+
+            if !window.is_open() || window.is_key_down(Key::Escape) || window.is_key_released(Key::Escape) {
+                exit = true;
+                paused = false;
+            }
+
+            if window.is_key_down(Key::S) || window.is_key_released(Key::S) {
+                save_images = true;
+                exit = true;
+                paused = false;
+            }
+
+            window.get_mouse_pos(MouseMode::Discard).map(|(x, y)| {
+                if window.get_mouse_down(MouseButton::Left) {
+                    paused = true;
+                    // tx.send(format!("PATH mx:{}, my:{} - ", x, y)).unwrap();
+    
+                    let u = (x as f32) / WIDTH as f32;
+                    let v = (ny as f32 - (y as f32)) / HEIGHT as f32;
+                    let mut ray = cam.get_ray(u, v);
+                    ray.debug = true;
+                    let col = ray_color(&ray, world.clone(), environment.clone(), &mis_objects, max_depth, Some(&tx));
+ 
+                }
+                    
+                if window.get_mouse_down(MouseButton::Right) {
+                    paused = false;
+                }                 
+            });
+
+            if !paused {
+                break;
+            }
+        }
+
+        if exit == true {
             break;
         }
 
-        if window.is_key_down(Key::S) || window.is_key_released(Key::S) {
-            save_images = true;
-            break;
-        }
+        // Debug rays at mouse position
+        
     }
     
     let albedo_buf = (0..ny)

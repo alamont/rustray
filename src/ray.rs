@@ -5,11 +5,12 @@ pub struct Ray {
     a: Vector3<f32>,
     b: Vector3<f32>,
     pub albedo_normal_ray: bool,
+    pub debug: bool
 }
 
 impl Ray {
     pub fn new(a: Vector3<f32>, b: Vector3<f32>) -> Self {
-        return Ray { a, b, albedo_normal_ray: false };
+        return Ray { a, b, albedo_normal_ray: false, debug: false };
     }
 
     pub fn origin(&self) -> Vector3<f32> {

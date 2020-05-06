@@ -16,12 +16,12 @@ use crate::vec::{
 };
 use crate::vec::{random_unit_vec, random_vec_in_unit_sphere};
 
-pub fn reflect(v: Vector3<f32>, n: Vector3<f32>) -> Vector3<f32> {
+pub fn reflect(v: &Vector3<f32>, n: &Vector3<f32>) -> Vector3<f32> {
     v - 2.0 * v.dot(&n) * n
 }
 
-pub fn refract(uv: Vector3<f32>, n: Vector3<f32>, etai_over_etat: f32) -> Vector3<f32> {
-    let cos_theta = (-uv).dot(&n);
+pub fn refract(uv: &Vector3<f32>, n: &Vector3<f32>, etai_over_etat: f32) -> Vector3<f32> {
+    let cos_theta = (-uv).dot(&n).min(1.0);
     let r_out_parallel = etai_over_etat * (uv + cos_theta * n);
     let r_out_perp = -(1.0 - r_out_parallel.magnitude_squared()).sqrt() * n;
     r_out_parallel + r_out_perp
@@ -66,6 +66,9 @@ impl Material for Lambertian {
     fn scatter(&self, _: &Ray, hit: &HitRecord) -> Option<ScatterRecord> {
         let w = hit.normal.normalize();
         let pdf = CosinePdf { w };
+
+        // let scatter_direction = hit.normal + random_unit_vec();
+        // let scattered = Ray::new(hit.p, scatter_direction);
         Some(ScatterRecord {
             specular_ray: None,
             attenuation: self.albedo.value(hit.uv, hit.p),
@@ -89,7 +92,7 @@ pub struct Metal {
 
 impl Material for Metal {
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> Option<ScatterRecord> {
-        let reflected = reflect(ray.direction().normalize(), hit.normal);
+        let reflected = reflect(&ray.direction().normalize(), &hit.normal);
         let specular_ray = Ray::new(hit.p, reflected + self.fuzz * random_vec_in_unit_sphere());
         let attenuation = self.albedo.value(hit.uv, hit.p);
         Some(ScatterRecord {
@@ -133,15 +136,15 @@ impl Material for Dielectric {
         }
 
         let scattered = if etai_over_etat * sin_theta > 1.0 {
-            let reflected = reflect(unit_direction, normal);
+            let reflected = reflect(&unit_direction, &normal);
             Ray::new(hit.p, reflected)
         } else {
-            let reflect_prob = schlick(cos_theta, self.ref_idx);
+            let reflect_prob = schlick(cos_theta, etai_over_etat);
             let mut rng = thread_rng();
-            let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
-                reflect(unit_direction, normal)
+            let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob  {
+                reflect(&unit_direction, &normal)               
             } else {
-                refract(unit_direction, normal, etai_over_etat)
+                refract(&unit_direction, &normal, etai_over_etat)
             };
             Ray::new(hit.p, refracted_or_reflected)
         };
@@ -225,13 +228,13 @@ impl Material for DielectricSurfaceLambert {
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let scattered = if etai_over_etat * sin_theta > 1.0 {
-            let reflected = reflect(unit_direction, normal);
+            let reflected = reflect(&unit_direction, &normal);
             Ray::new(hit.p, reflected)
         } else {
-            let reflect_prob = schlick(cos_theta, self.ref_idx);
+            let reflect_prob = schlick(cos_theta, etai_over_etat);
             let mut rng = thread_rng();
             let refracted_or_reflected = if rng.gen::<f32>() < reflect_prob {
-                reflect(unit_direction, normal)
+                reflect(&unit_direction, &normal)
             } else {
                 // Instead of refracting we do Lambertian
                 let w = hit.normal.normalize();
@@ -274,7 +277,7 @@ impl Default for DielectricSurfaceLambert {
 pub trait EnvironmentMaterial: Sync + Send {
     fn emit(&self, ray: &Ray) -> Vector3<f32>;
     fn pdf_value(&self, _direction: &Vector3<f32>) -> f32 {
-        0.0
+        1.0 / (4.0  * f32::consts::PI )
     }
     fn random(&self) -> Vector3<f32> {
         random_unit_vec()
@@ -306,7 +309,7 @@ pub struct Environment {
     pub pdf: Vec<f32>,
     pub width: f32,
     pub height: f32,
-    pub cum_pdf_sorted: Vec<(usize, f32)>
+    pub cum_pdf: Vec<f32>
 }
 
 const PI: f32 = f32::consts::PI;
@@ -328,57 +331,16 @@ impl EnvironmentMaterial for Environment {
         let mut rng = thread_rng();
         let rnd_num = rng.gen::<f32>();
 
-        // let (x, y) = self
-        //     .pdf_mipmaps
-        //     .iter()
-        //     .rev()
-        //     .fold((0, 0), |(x, y), (w, h, pdf)| {
-        //         let rnd_num = rng.gen::<f32>();
-        //         if w * h < 4 {
-        //             let cum_pdf = vec![pdf[0]/pdf[1], 1.0];
-        //             println!("{} {}", cum_pdf[0], cum_pdf[1]);
-        //             let n = cum_pdf.iter().position(|p| p >= &rnd_num).unwrap();
-        //             n_to_xy(n, *w, *h)
-        //         } else {
-        //             let p0 = (x * 2 + y * 2 * (*w as u32)) as usize;
-        //             let p1 = (p0 + 1) as usize;
-        //             let p2 = (p0 + (*w as usize)) as usize;
-        //             let p3 = (p2 + 1) as usize;
-        //             let spdf = vec![pdf[p0], pdf[p1], pdf[p2], pdf[p3]];
-        //             let mut cum_spdf = cum_sum(&spdf);
-        //             let max = cum_spdf[3];
-        //             if max == 0.0 {
-        //                 cum_spdf = vec![0.25, 0.5, 0.75, 1.0];
-        //             } else {
-        //                 cum_spdf = vec![cum_spdf[0] / max, cum_spdf[1] / max, cum_spdf[2] / max, cum_spdf[3] / max];
-        //             }                   
-        //             let n = cum_spdf.iter().position(|p| p >= &rnd_num).unwrap();
-        //             let (dx, dy) = n_to_xy(n, 2, 2);
-        //             (dx + x * 2, dy + y * 2)
-        //         }
-        //     });
-
-
-
-        // let u = x as f32 / (self.width - 1.0);
-        // let v = 1.0 - y as f32 / (self.height - 1.0);
-
-        // println!("x:, {}, y: {}, u: {}, v: {}", x, y, u, v);
-
-        // let phi = u * 2.0 * PI - PI;
-        // let theta = v * PI - PI / 2.0;
-        let location = self.cum_pdf_sorted.binary_search_by(|(i, v)| {           
+        let location = self.cum_pdf.binary_search_by(|v| {           
             v.partial_cmp(&rnd_num).unwrap()
         });
-        let idx = match location {
+        let n = match location {
             Ok(i) => i,
             Err(i) => i
         };
-        let n = self.cum_pdf_sorted[idx].0;
+        // let n = self.cum_pdf[idx];
 
         let (x, y) = n_to_xy(n, self.width as u32, self.height as u32);
-        // let phi = 0.6 * 2.0 * PI - PI;
-        // let theta = (1.0 - 0.37) * PI - PI / 2.0;
 
         let u = x as f32 / (self.width - 1.0);
         let v = 1.0 - y as f32 / (self.height - 1.0);
@@ -428,17 +390,16 @@ impl Environment {
             .image_buffer
             .enumerate_pixels()
             .map(|(_x, y, p)| {
-                // let a = (((y as f32) / height - 0.5 ) * PI).cos();
                 let a = (1.0 / height)
                     * PI
                     * ((1.0 / width) * 2.0 * PI)
                     * (((y as f32) / height - 0.5) * PI).cos();
 
                 let image::Rgb(pixel_data) = p;
-                (pixel_data[0] + pixel_data[1] + pixel_data[2]) / 3.0 * a
+                let v = (pixel_data[0] + pixel_data[1] + pixel_data[2]) / 3.0;
+                v * a
             })
             .collect::<Vec<f32>>();
-        // let pdf = image_vec;
 
         let sum: f32 = image_vec.iter().sum();
         let pdf = image_vec
@@ -449,14 +410,17 @@ impl Environment {
 
         let cum_pdf = pdf.iter().fold(vec![], |mut acc, w| {
             if acc.len() > 0 {
-                acc.push(acc.last().unwrap() + w/pdf_sum)
+                acc.push(acc.last().unwrap() + w / pdf_sum)
             } else {
-                acc.push(*w/pdf_sum)
+                acc.push(*w / pdf_sum)
             }
             acc
         });
-        let mut cum_pdf_sorted = cum_pdf.iter().enumerate().map(|(i, v)| (i, *v)).collect::<Vec<(usize, f32)>>();
-        cum_pdf_sorted.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        // cum_pdf = cum_pdf.iter().map(|v| v / pdf_sum).collect::<Vec<f32>>();
+
+
+        // let mut cum_pdf_sorted = cum_pdf.iter().enumerate().map(|(i, v)| (i, *v)).collect::<Vec<(usize, f32)>>();
+        // cum_pdf_sorted.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
 
         // println!("{} {} {}", cum_pdf.first().unwrap(), cum_pdf[10000], cum_pdf.last().unwrap());
 
@@ -465,7 +429,7 @@ impl Environment {
             pdf,
             width,
             height,
-            cum_pdf_sorted,
+            cum_pdf,
         }
     }
 }

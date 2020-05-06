@@ -1,5 +1,5 @@
 use nalgebra::{Vector2, Vector3, Vector4};
-use std::sync::Arc;
+use std::{f32, sync::Arc};
 use image::{ImageBuffer, DynamicImage, GenericImageView, ColorType, Pixel, GenericImage};
 use num_traits::{ToPrimitive};
 
@@ -35,9 +35,9 @@ pub struct CheckerTex {
 
 impl Texture for CheckerTex {
     fn value(&self, uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32> {
-        let sines = (10.0 * p.x / self.scale).sin()
-            * (10.0 * p.y / self.scale).sin()
-            * (10.0 * p.z / self.scale).sin();
+        let sines = (f32::consts::PI * 10.0 * p.x / self.scale).sin()
+            * (f32::consts::PI * 10.0 * p.y / self.scale).sin()
+            * (f32::consts::PI * 10.0 * p.z / self.scale).sin();
         if sines < 0.0 {
             self.odd.value(uv, p)
         } else {
@@ -54,7 +54,7 @@ pub struct CheckerTexMap {
 
 impl Texture for CheckerTexMap {
     fn value(&self, uv: Vector2<f32>, p: Vector3<f32>) -> Vector3<f32> {
-        let sines = (10.0 * uv.x / self.scale).sin() * (10.0 * uv.y / self.scale).sin();
+        let sines = (f32::consts::PI * 10.0 * (uv.x -0.5) / self.scale).sin() * (f32::consts::PI * 10.0 * (uv.y -0.5) / self.scale).sin();
         if sines < 0.0 {
             self.odd.value(uv, p)
         } else {
