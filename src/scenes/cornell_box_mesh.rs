@@ -16,19 +16,19 @@ use crate::scenes::prefabs::cornell_box::{cornell_box, cornell_box_camera, corne
 
 pub fn cornell_box_mesh() -> Scene {
 
-    let aluminium  = Arc::new(Metal { albedo: Arc::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.25});
-    let glass = Arc::new(Dielectric {
+    let aluminium  = Box::new(Metal { albedo: Box::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.25});
+    let glass = Box::new(Dielectric {
         color: vec(1.0, 1.0, 1.0),
         ..Dielectric::default()
     });
 
 
-    let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
+    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
 
     objects.push(cornell_box());
 
     let mesh = Mesh::new(String::from("assets/teapot2.obj"), aluminium, Vector3::new(10.0, 10.0, 10.0));
-    objects.push(Arc::new(
+    objects.push(Box::new(
         Transform::new(
             mesh,
             Vector3::new(0.0, 100.0, 0.0),
@@ -36,7 +36,7 @@ pub fn cornell_box_mesh() -> Scene {
         ))
     );
 
-    objects.push(Arc::new(Transform::new(
+    objects.push(Box::new(Transform::new(
         Sphere::new(vec_zero(), 50.0, glass.clone()),
         vec3(100.0, 50.0, 100.0),
         vec_zero(),

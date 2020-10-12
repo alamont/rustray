@@ -7,16 +7,16 @@ use crate::ray::Ray;
 
 const MAX_LEAF: usize = 2;
 
-pub struct BVHNode {
-    left:Arc<dyn Hittable>,
-    right:Arc<dyn Hittable>,
+pub struct BVHNode<'a> {
+    left: &'a Box<dyn Hittable>,
+    right: &'a Box<dyn Hittable>,
     bbox: AABB,
 }
 
 #[allow(unreachable_patterns)]
-impl BVHNode {
-    pub fn build(mut objects: Vec<Arc<dyn Hittable>>, depth: u32) ->Arc<dyn Hittable> {
-        fn axis_range(objects: &Vec<Arc<dyn Hittable>>, axis: usize) -> f32 {
+impl<'a> BVHNode<'a> {
+    pub fn build(mut objects: Vec<Box<dyn Hittable>>, depth: u32) ->Box<dyn Hittable> {
+        fn axis_range(objects: &Vec<Box<dyn Hittable>>, axis: usize) -> f32 {
             let range = objects.iter().fold(f32::MAX..f32::MIN, |range, obj| {
                 let bb = obj.bounding_box().unwrap();
                 let min = bb.min[axis].min(bb.max[axis]);
@@ -56,10 +56,10 @@ impl BVHNode {
                 let left_bbox = if let Some(bb) = left.bounding_box() { bb } else { AABB::zero() };
                 let right_bbox = if let Some(bb) = right.bounding_box() { bb } else { AABB::zero() };
                 let bbox = surrounding_box(left_bbox, right_bbox);
-                Arc::new(BVHNode { left, right, bbox })
+                Box::new(BVHNode { left: &left, right: &right, bbox })
             }
             2..=MAX_LEAF => {
-                Arc::new(HittableList { objects })
+                Box::new(HittableList { objects })
             }
             _ => {
                 let mut a = objects;
@@ -77,13 +77,13 @@ impl BVHNode {
                     AABB::zero()
                 };
                 let bbox = surrounding_box(left_bbox, right_bbox);
-                Arc::new(BVHNode { left, right, bbox })
+                Box::new(BVHNode { left: &left, right: &right, bbox })
             }
         }
     }
 }
 
-impl Hittable for BVHNode {
+impl<'a> Hittable for BVHNode<'a> {
     fn hit(&self, ray: &Ray, t_min: f32, mut t_max: f32) -> Option<HitRecord> {
         if self.bbox.hit(ray, t_min, t_max) {
             let left_hit = self.left.hit(ray, t_min, t_max);

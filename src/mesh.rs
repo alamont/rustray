@@ -13,15 +13,15 @@ use std::sync::Arc;
 use std::path::Path;
 use tobj;
 
-pub struct Mesh {
-    pub triangles:Arc<dyn Hittable>,
-    pub material: Arc<dyn Material>,
+pub struct Mesh<'a> {
+    pub triangles:Box<dyn Hittable>,
+    pub material: &'a Box<dyn Material>,
 }
 
-impl Mesh {
-    pub fn new(mesh_path: String, material:  Arc<dyn Material>, scale: Vector3<f32>) -> Self {
+impl<'a> Mesh<'a> {
+    pub fn new(mesh_path: String, material:  &'a Box<dyn Material>, scale: Vector3<f32>) -> Self {
 
-        // let triangles: Vec<Arc<dyn Hittable>> = Vec::new();
+        // let triangles: Vec<Box<dyn Hittable>> = Vec::new();
 
         let obj = tobj::load_obj(&Path::new(&mesh_path));
         assert!(obj.is_ok());
@@ -54,26 +54,26 @@ impl Mesh {
             };
 
 
-            Arc::new(Triangle {
+            Box::new(Triangle {
                 v0: v[0] * scale.x,
                 v1: v[1] * scale.y,
                 v2: v[2] * scale.z,
-                material: material.clone(),
+                material: &material,
                 n0: n[0],
                 n1: n[1],
                 n2: n[2],
-            }) as Arc<dyn Hittable>
-        }).collect::<Vec<Arc<dyn Hittable>>>();
+            }) as Box<dyn Hittable>
+        }).collect::<Vec<Box<dyn Hittable>>>();
 
         Self {
             triangles: BVHNode::build(triangles, 0),
-            material: material.clone()
+            material: material
         }
 
     }
 }
 
-impl Hittable for Mesh {
+impl<'a> Hittable for Mesh<'a> {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         self.triangles.hit(ray, t_min, t_max)
     }

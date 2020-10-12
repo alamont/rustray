@@ -6,7 +6,7 @@ use std::{fs, io};
 use crate::aarect::{AARect, AARectType::*};
 use crate::bvh::BVHNode;
 use crate::hittable::{FlipFace, Hittable, Transform};
-use crate::material::{Dielectric, DiffuseLight, Lambertian, Metal, Environment, DielectricSurfaceLambert, SimpleEnvironment};
+use crate::material::{Material, Dielectric, DiffuseLight, Lambertian, Metal, Environment, DielectricSurfaceLambert, SimpleEnvironment};
 use crate::mesh::Mesh;
 // use crate::scenes::prefabs::cornell_box::{
 //     cornell_box, cornell_box_camera, cornell_box_environment,
@@ -19,80 +19,80 @@ use crate::camera::{Camera, ApertureShape};
 
 
 pub fn scene() -> Scene {
-    let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
+    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
     
-    let glass = Arc::new(Dielectric {
+    let glass = Box::new(Dielectric {
         color: vec(1.0, 1.0, 1.0),
         ref_idx: 1.52,
         ..Dielectric::default()
     });
-    let aluminium  = Arc::new(Metal { albedo: Arc::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
-    let red = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.65, 0.05, 0.05) })});
-    let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
-    let green = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});    
+    let aluminium  = Box::new(Metal { albedo: Box::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
+    let red = Box::new(Lambertian { albedo: Box::new(ConstantTex { color: vec3(0.65, 0.05, 0.05) })});
+    let white = Box::new(Lambertian { albedo: Box::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
+    let green = Box::new(Lambertian { albedo: Box::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});    
 
-    let checker_tex_map = Arc::new(CheckerTexMap {
+    let checker_tex_map = Box::new(CheckerTexMap {
         odd: ConstantTex::new_arc(vec(0.3, 0.3, 0.3)),
         even: ConstantTex::new_arc(vec(0.9, 0.9, 0.9)),
         scale: 1.0,
     });
 
-    let checker_mat = Arc::new(Lambertian { albedo: checker_tex_map });
+    let checker_mat = Box::new(Lambertian { albedo: checker_tex_map });
 
     let earth_image = image::open("assets/topo.jpg").unwrap().to_rgb();
 
-    let earth_material = Arc::new(DielectricSurfaceLambert{
-        albedo: Arc::new(
-            ImageTexture::new(earth_image.clone())
+    let earth_material = Box::new(DielectricSurfaceLambert{
+        albedo: Box::new(
+            ImageTexture::new(earth_image)
                 .sampler(Bilinear)
                 .wrap_mode(Clamp),
         ),
         ..DielectricSurfaceLambert::default()
     });
 
-    let env_material = Arc::new(Environment::new("assets/wooden_motel_4k.hdr".to_string()));
-    let sand = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(244.0/255.99, 219.0/255.99, 154.0/255.99) })});
+    let env_material = Box::new(Environment::new("assets/wooden_motel_4k.hdr".to_string()));
+    let sand = Box::new(Lambertian { albedo: Box::new(ConstantTex { color: vec3(244.0/255.99, 219.0/255.99, 154.0/255.99) })});
 
-    objects.push(Arc::new(AARect { 
+    objects.push(Box::new(AARect { 
         xy0: vec2(-1000.0, -1000.0), 
         xy1: vec2(1000.0, 1000.0),
         k: 0.0,
-        material: checker_mat.clone(),
+        material: &checker_mat,
         rect_type: XZ
     }));
 
-    // objects.push(Arc::new(Transform::new(
-    //     Sphere::new(vec_zero(), 200.0, red.clone()),
+    // objects.push(Box::new(Transform::new(
+    //     Sphere::new(vec_zero(), 200.0, red),
     //     vec3(-450.0, 200.0, -100.0),
     //     vec_zero(),
     // )));
 
-    // objects.push(Arc::new(Transform::new(
-    //     Sphere::new(vec_zero(), 200.0, white.clone()),
+    // objects.push(Box::new(Transform::new(
+    //     Sphere::new(vec_zero(), 200.0, white),
     //     vec3(0.0, 200.0, -100.0),
     //     vec_zero(),
     // )));
 
-    // objects.push(Arc::new(Transform::new(
-    //     Sphere::new(vec_zero(), 200.0, green.clone()),
+    // objects.push(Box::new(Transform::new(
+    //     Sphere::new(vec_zero(), 200.0, green),
     //     vec3(450.0, 200.0, -100.0),
     //     vec_zero(),
     // )));
 
-    objects.push(Arc::new(
-        Sphere::new(vec3(-450.0, 200.0, -100.0), 200.0, earth_material.clone()),
+    objects.push(Box::new(
+        Sphere::new(vec3(-450.0, 200.0, -100.0), 200.0, earth_material),
     ));
 
-    objects.push(Arc::new(
-        Sphere::new(vec3(0.0, 200.0, -100.0), 200.0, glass.clone()),
+    objects.push(Box::new(
+        Sphere::new(vec3(0.0, 200.0, -100.0), 200.0, glass),
     ));
 
-    objects.push(Arc::new(
-        Sphere::new(vec3(450.0, 200.0, -100.0), 200.0, aluminium.clone()),
+    objects.push(Box::new(
+        Sphere::new(vec3(450.0, 200.0, -100.0), 200.0, aluminium),
     ));
 
-    // objects.push(Arc::new(Transform::new(
-    //     Sphere::new(vec_zero(), 100.0, red.clone()),
+    // objects.push(Box::new(Transform::new(
+    //     Sphere::new(vec_zero(), 100.0, red),
     //     vec3(-450.0, 100.0, -200.0),
     //     vec_zero(),
     // )));
@@ -113,7 +113,7 @@ pub fn scene() -> Scene {
         camera,
         objects: BVHNode::build(objects, 0),
         // environment: env_material,
-        environment: Arc::new(SimpleEnvironment {}),
+        environment: Box::new(SimpleEnvironment {}),
         mis_objects: vec![]
     }
 }

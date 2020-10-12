@@ -69,13 +69,13 @@ fn clamp(x: f32, min: f32, max: f32) -> f32 {
     x
 }
 
-fn ray_color(
+fn ray_color<'a>(
     ray: &Ray, 
-    world: Arc<dyn Hittable>, 
-    environment: Arc<dyn EnvironmentMaterial>,
-    mis_objects: &Vec<Arc<dyn Hittable>>,
+    world: &'a Box<dyn Hittable>, 
+    environment: &'a Box<dyn EnvironmentMaterial>,
+    mis_objects: &'a Vec<Box<dyn Hittable>>,
     depth: u32,
-    _tx: Option<&Sender<PathDebugMsg>>) -> Vector3<f32> {
+    _tx: Option<&'a Sender<PathDebugMsg>>) -> Vector3<f32> {
         
     unsafe {
         RAY_COUNT += 1;
@@ -111,16 +111,16 @@ fn ray_color(
             if has_nan(&attenuation) {
                 return emitted;
             }
-            let mut pdfs: Vec<Arc<dyn Pdf>> = Vec::new();
-            if mis_objects.len() > 0 {                
-                for mo in mis_objects.iter() {
-                    pdfs.push(Arc::new(HittablePdf { origin: hit_rec.p, hittable: mo.clone() }));
-                }
-            }
+            let mut pdfs: Vec<Box<dyn Pdf>> = Vec::new();
+            // if mis_objects.len() > 0 {                
+            //     for mo in mis_objects.iter() {
+            //         pdfs.push(Box::new(HittablePdf { origin: hit_rec.p, hittable: &mo }));
+            //     }
+            // }
             if let Some(pdf) = scatter_record.pdf {
                 pdfs.push(pdf);
             }
-            // pdfs.push(Arc::new(EnvPdf { environment: environment.clone() }));
+            // pdfs.push(Box::new(EnvPdf { environment: environment.clone() }));
             
             let mixture_pdf = MixturePdf::new_uniform(pdfs);
             let mut scattered_ray = Ray::new(hit_rec.p, mixture_pdf.generate());
@@ -143,7 +143,7 @@ fn ray_color(
 }
 
 
-fn ray_albedo(ray: &Ray, world: &Arc<dyn Hittable>) -> Vector3<f32> {
+fn ray_albedo(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
         if let Some(scatter_record) = hit_rec.material.scatter(&ray, &hit_rec) {
             let attenuation = scatter_record.attenuation;
@@ -153,7 +153,7 @@ fn ray_albedo(ray: &Ray, world: &Arc<dyn Hittable>) -> Vector3<f32> {
     vec_zero()
 }
 
-fn ray_normal(ray: &Ray, world: &Arc<dyn Hittable>) -> Vector3<f32> {
+fn ray_normal(ray: &Ray, world: &Box<dyn Hittable>) -> Vector3<f32> {
     if let Some(hit_rec) = world.hit(ray, 0.001, f32::MAX) {
         return hit_rec.normal.normalize();
     }
@@ -269,7 +269,7 @@ fn main() {
                         let u = (x as f32 + rng.gen::<f32>()) / nx as f32;
                         let v = (ny as f32 - (y as f32 + rng.gen::<f32>())) / ny as f32;
                         let ray = cam.get_ray(u, v);                        
-                        let col = ray_color(&ray, world.clone(), environment.clone(), &mis_objects, max_depth, None);
+                        let col = ray_color(&ray, &world, &environment, &mis_objects, max_depth, None);
                         let offset = ((y * nx + x) * 3) as usize;
                         vec![
                             col.x + image_buf[offset],
@@ -322,7 +322,7 @@ fn main() {
                     let v = (ny as f32 - (y as f32)) / HEIGHT as f32;
                     let mut ray = cam.get_ray(u, v);
                     ray.debug = true;
-                    let col = ray_color(&ray, world.clone(), environment.clone(), &mis_objects, max_depth, Some(&tx));
+                    let col = ray_color(&ray, &world, &environment, &mis_objects, max_depth, Some(&tx));
  
                 }
                     

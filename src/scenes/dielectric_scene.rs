@@ -11,22 +11,22 @@ use crate::sphere::Sphere;
 use crate::texture::{CheckerTex, CheckerTexMap, ConstantTex};
 use crate::vec::{vec, vec_zero};
 
-pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
+pub fn dielectric_scene(aspect: f32) -> (Camera,Box<dyn Hittable>) {
     let mut world = HittableList::default();
 
-    let checker_floor = Arc::new(CheckerTex {
+    let checker_floor = Box::new(CheckerTex {
         odd: ConstantTex::new_arc(vec(0.2, 0.3, 0.1)),
         even: ConstantTex::new_arc(vec(0.6, 0.6, 0.6)),
         scale: 1.0,
     });
 
-    let checker_tex = Arc::new(CheckerTex {
+    let checker_tex = Box::new(CheckerTex {
         odd: ConstantTex::new_arc(vec(0.3, 0.3, 0.3)),
         even: ConstantTex::new_arc(vec(0.9, 0.9, 0.9)),
         scale: 1.0,
     });
 
-    let checker_tex_map = Arc::new(CheckerTexMap {
+    let checker_tex_map = Box::new(CheckerTexMap {
         odd: ConstantTex::new_arc(vec(0.3, 0.3, 0.3)),
         even: ConstantTex::new_arc(vec(0.9, 0.9, 0.9)),
         scale: 0.25,
@@ -37,13 +37,13 @@ pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(0.0, -1000.5, -1.0),
         radius: 1000.0,
-        material: Arc::new(Lambertian {
+        material: Box::new(Lambertian {
             albedo: checker_floor.clone(),
         }),
     });
 
 
-    // let checker_roughness = Arc::new(CheckerTex {
+    // let checker_roughness = Box::new(CheckerTex {
     //     odd: ConstantTex::new_arc(vec(1.0, 0.1, 0.1)),
     //     even: ConstantTex::new_arc(vec_zero())),
     //     scale: 0.5,
@@ -53,7 +53,7 @@ pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(-1.0, 0.0, -1.0),
         radius: 0.5,
-        material: Arc::new(Dielectric {
+        material: Box::new(Dielectric {
             color: vec(0.1, 0.1, 1.0),
             density: 0.1,
             ..Dielectric::default()
@@ -63,7 +63,7 @@ pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(-1.0, 0.0, -1.0),
         radius: -0.45,
-        material: Arc::new(Dielectric {
+        material: Box::new(Dielectric {
             color: vec(0.1, 0.1, 1.0),
             density: 0.1,
             ..Dielectric::default()
@@ -73,7 +73,7 @@ pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(-1.0, 0.0, -1.0),
         radius: 0.2,
-        material: Arc::new(Dielectric {
+        material: Box::new(Dielectric {
             color: vec(0.1, 0.1, 1.0),
             density: 0.1,
             ..Dielectric::default()
@@ -84,7 +84,7 @@ pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(0.0, 0.0, -1.0),
         radius: 0.5,
-        material: Arc::new(Lambertian {
+        material: Box::new(Lambertian {
             albedo: checker_tex_map,
         }),
     });
@@ -93,7 +93,7 @@ pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(0.0, 0.0, -2.0),
         radius: 0.5,
-        material: Arc::new(Lambertian {
+        material: Box::new(Lambertian {
             albedo: checker_tex.clone(),
         }),
     });
@@ -102,7 +102,7 @@ pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(1.0, 0.0, -1.0),
         radius: 0.5,
-        material: Arc::new(Dielectric {
+        material: Box::new(Dielectric {
             color: vec(1.0, 1.0, 1.0),
             ..Dielectric::default()
         }),
@@ -117,6 +117,6 @@ pub fn dielectric_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
 
     (
         Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus),
-        Arc::new(world),
+        Box::new(world),
     )
 }

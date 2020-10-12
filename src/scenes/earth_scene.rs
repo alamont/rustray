@@ -11,16 +11,16 @@ use crate::sphere::Sphere;
 use crate::texture::{CheckerTex, CheckerTexMap, ConstantTex, ImageTexture};
 use crate::vec::{vec, vec_zero};
 
-pub fn earth_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
+pub fn earth_scene(aspect: f32) -> (Camera,Box<dyn Hittable>) {
     let mut world = HittableList::default();
 
-    let checker_tex = Arc::new(CheckerTex {
+    let checker_tex = Box::new(CheckerTex {
         odd: ConstantTex::new_arc(vec(0.3, 0.3, 0.3)),
         even: ConstantTex::new_arc(vec(0.9, 0.9, 0.9)),
         scale: 1.0,
     });
 
-    let checker_tex_map = Arc::new(CheckerTexMap {
+    let checker_tex_map = Box::new(CheckerTexMap {
         odd: ConstantTex::new_arc(vec(0.3, 0.3, 0.3)),
         even: ConstantTex::new_arc(vec(0.9, 0.9, 0.9)),
         scale: 0.25,
@@ -31,7 +31,7 @@ pub fn earth_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(0.0, -1000.5, -1.0),
         radius: 1000.0,
-        material: Arc::new(Lambertian {
+        material: Box::new(Lambertian {
             albedo: ConstantTex::new_arc(vec(0.5, 0.5, 0.5)),
         }),
     });
@@ -39,7 +39,7 @@ pub fn earth_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(-1.0, 0.0, -1.0),
         radius: 0.5,
-        material: Arc::new(Lambertian {
+        material: Box::new(Lambertian {
             albedo: checker_tex_map,
         }),
     });
@@ -47,7 +47,7 @@ pub fn earth_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(0.0, 0.0, -1.0),
         radius: 0.5,
-        material: Arc::new(Lambertian {
+        material: Box::new(Lambertian {
             albedo: checker_tex,
         }),
     });
@@ -56,8 +56,8 @@ pub fn earth_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
     world.push(Sphere {
         center: Vector3::new(1.0, 0.0, -1.0),
         radius: 0.5,
-        material: Arc::new(Lambertian {
-            albedo: Arc::new(ImageTexture::new(String::from("assets/earthmap.jpg"))),
+        material: Box::new(Lambertian {
+            albedo: Box::new(ImageTexture::new(String::from("assets/earthmap.jpg"))),
         }),
     });
 
@@ -71,6 +71,6 @@ pub fn earth_scene(aspect: f32) -> (Camera,Arc<dyn Hittable>) {
 
     (
         Camera::new(lookfrom, lookat, vup, 20.0, aspect, aperture, dist_to_focus),
-        Arc::new(world),
+        Box::new(world),
     )
 }

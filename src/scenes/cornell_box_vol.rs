@@ -21,33 +21,33 @@ use crate::scenes::Scene;
 
 pub fn cornell_box_vol(aspect: f32) -> Scene {
 
-    let red = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.65, 0.05, 0.05) })});
-    let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
-    let green = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});
-    // let light = Arc::new(DiffuseLight { emit: Arc::new(ConstantTex { color: vec3(14.0, 14.0, 14.0) })});
-    let light = Arc::new(DiffuseLight { emit: Arc::new(ConstantTex { color: vec3(7.0, 7.0, 7.0) })});
-    let aluminium  = Arc::new(Metal { albedo: Arc::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
+    let red = Box::new(Lambertian { albedo: Box::new(ConstantTex { color: vec3(0.65, 0.05, 0.05) })});
+    let white = Box::new(Lambertian { albedo: Box::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
+    let green = Box::new(Lambertian { albedo: Box::new(ConstantTex { color: vec3(0.12, 0.45, 0.15) })});
+    // let light = Box::new(DiffuseLight { emit: Box::new(ConstantTex { color: vec3(14.0, 14.0, 14.0) })});
+    let light = Box::new(DiffuseLight { emit: Box::new(ConstantTex { color: vec3(7.0, 7.0, 7.0) })});
+    let aluminium  = Box::new(Metal { albedo: Box::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
 
-    let dark_medium = Arc::new(Isotropic { albedo: Arc::new(ConstantTex { color: vec_zero() })});
-    let light_medium = Arc::new(Isotropic { albedo: Arc::new(ConstantTex { color: vec_one() })});
+    let dark_medium = Box::new(Isotropic { albedo: Box::new(ConstantTex { color: vec_zero() })});
+    let light_medium = Box::new(Isotropic { albedo: Box::new(ConstantTex { color: vec_one() })});
 
-    let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
+    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
 
-    objects.push(Arc::new(FlipFace::new(AARect { 
+    objects.push(Box::new(FlipFace::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
         material: green.clone(),
         rect_type: YZ
     })));
-    objects.push(Arc::new(AARect { 
+    objects.push(Box::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 0.0,
         material: red.clone(),
         rect_type: YZ
     }));
-    objects.push(Arc::new(AARect { 
+    objects.push(Box::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
@@ -55,7 +55,7 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
         rect_type: XZ
     }));
     // // Original light
-    // objects.push(Arc::new(FlipFace::new(AARect { 
+    // objects.push(Box::new(FlipFace::new(AARect { 
     //     xy0: vec2(213.0, 227.0), 
     //     xy1: vec2(343.0, 332.0),
     //     k: 554.0,
@@ -63,21 +63,21 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
     //     rect_type: XZ
     // })));
     // Bigger light
-    objects.push(Arc::new(FlipFace::new(AARect { 
+    objects.push(Box::new(FlipFace::new(AARect { 
         xy0: vec2(113.0, 127.0), 
         xy1: vec2(443.0, 442.0),
         k: 554.0,
         material: light.clone(),
         rect_type: XZ
     })));
-    objects.push(Arc::new(AARect { 
+    objects.push(Box::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 0.0,
         material: white.clone(),
         rect_type: XZ
     }));
-    objects.push(Arc::new(FlipFace::new(AARect { 
+    objects.push(Box::new(FlipFace::new(AARect { 
         xy0: vec2(0.0, 0.0), 
         xy1: vec2(555.0, 555.0),
         k: 555.0,
@@ -98,19 +98,19 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
         vec(165.0, 165.0, 165.0),
         white.clone()
     );
-    let box1_density_texture = Arc::new(CheckerTex {
-        odd: Arc::new(ConstantTex {color: vec_one() * 0.02}),
-        even: Arc::new(ConstantTex {color: vec_zero()}),
+    let box1_density_texture = Box::new(CheckerTex {
+        odd: Box::new(ConstantTex {color: vec_one() * 0.02}),
+        even: Box::new(ConstantTex {color: vec_zero()}),
         scale: 300.0,
     });
 
 
-    // objects.push(Arc::new(NonUniformMedium::new(box1, 0.05, light_medium)));
-    objects.push(Arc::new(ConstantMedium::new(box2, 0.02, dark_medium)));
+    // objects.push(Box::new(NonUniformMedium::new(box1, 0.05, light_medium)));
+    objects.push(Box::new(ConstantMedium::new(box2, 0.02, dark_medium)));
 
     // To get local coordinates (before transform) for mediums, 
     // we need to apply the transform om the medium instead of the boundary
-    objects.push(Arc::new(
+    objects.push(Box::new(
         Transform::new(
             NonUniformMedium::new(box1_no_transform, box1_density_texture, 0.02, light_medium),
             vec3(115.0 + 165.0/2.0, 165.0/2.0, 65.0 + 165.0/2.0),
@@ -130,6 +130,6 @@ pub fn cornell_box_vol(aspect: f32) -> Scene {
     Scene {
         camera: Camera::new(lookfrom, lookat, vup, vfov, aspect, aperture, dist_to_focus),
         objects: BVHNode::build(objects, 0),
-        environment: Arc::new(Environment { emit: Arc::new(ConstantTex { color: vec_zero() })})
+        environment: Box::new(Environment { emit: Box::new(ConstantTex { color: vec_zero() })})
     }
 }

@@ -11,11 +11,11 @@ use std::f32;
 pub struct Sphere {
     pub center: Vector3<f32>,
     pub radius: f32,
-    pub material: Arc<dyn Material>,
+    pub material: Box<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Vector3<f32>, radius: f32, material: Arc<dyn Material>) -> Self {
+    pub fn new(center: Vector3<f32>, radius: f32, material: Box<dyn Material>) -> Self {
         Sphere {
             center,
             radius,
@@ -43,7 +43,7 @@ impl Hittable for Sphere {
                     p,
                     outward_normal,
                     ray,
-                    Arc::clone(&self.material),
+                    &self.material,
                     uv
                 ));
             }
@@ -57,7 +57,7 @@ impl Hittable for Sphere {
                     p,
                     outward_normal,
                     ray,
-                    Arc::clone(&self.material),
+                    &self.material,
                     uv
                 ));
             }

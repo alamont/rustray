@@ -13,15 +13,15 @@ use rand::{thread_rng, Rng};
 
 
 pub struct ConstantMedium {
-    boundary:Arc<dyn Hittable>,
-    phase_function: Arc<dyn Material>,
+    boundary:Box<dyn Hittable>,
+    phase_function: Box<dyn Material>,
     neg_inv_density: f32
 }
 
 impl ConstantMedium {
-    pub fn new(boundary: impl Hittable + 'static, density: f32, material: Arc<dyn Material>) -> Self {
+    pub fn new(boundary: impl Hittable, density: f32, material: Box<dyn Material>) -> Self {
         Self {
-            boundary: Arc::new(boundary),
+            boundary: Box::new(boundary),
             phase_function: material,
             neg_inv_density: -1.0 / density
         }
@@ -60,7 +60,7 @@ impl Hittable for ConstantMedium {
                     ray.at(t),
                     vec3(1.0, 0.0, 0.0),
                     ray,
-                    Arc::clone(&self.phase_function),
+                    &self.phase_function,
                     vec2(0.0, 0.0)))
 
             } else { None }
@@ -73,16 +73,16 @@ impl Hittable for ConstantMedium {
 }
 
 pub struct NonUniformMedium {
-    boundary:Arc<dyn Hittable>,
-    phase_function: Arc<dyn Material>,
-    density: Arc<dyn Texture>,
+    boundary:Box<dyn Hittable>,
+    phase_function: Box<dyn Material>,
+    density: Box<dyn Texture>,
     max_density: f32,
 }
 
 impl NonUniformMedium {
-    pub fn new(boundary: impl Hittable + 'static, density: Arc<dyn Texture>, max_density: f32, material: Arc<dyn Material>) -> Self {
+    pub fn new(boundary: impl Hittable, density: Box<dyn Texture>, max_density: f32, material: Box<dyn Material>) -> Self {
         Self {
-            boundary: Arc::new(boundary),
+            boundary: Box::new(boundary),
             phase_function: material,
             density,
             max_density
@@ -137,7 +137,7 @@ impl Hittable for NonUniformMedium {
                     ray.at(t),
                     vec3(1.0, 0.0, 0.0),
                     ray,
-                    Arc::clone(&self.phase_function),
+                    &self.phase_function,
                     vec2(0.0, 0.0)))
 
             } else { None }

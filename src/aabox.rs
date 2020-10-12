@@ -9,15 +9,15 @@ use nalgebra::{Vector2, Vector3};
 use std::f32;
 use std::sync::Arc;
 
-pub struct AABox {
+pub struct AABox<'a> {
     pub box_min: Vector3<f32>,
     pub box_max: Vector3<f32>,
-    pub sides: HittableList,
+    pub sides: HittableList<'a>,
 }
 
-impl AABox {
-    // pub fn new(p0: Vector3<f32>, p1: Vector3<f32>, material: Arc<dyn Material>) -> Self{
-    pub fn new(scale: Vector3<f32>, material: Arc<dyn Material>) -> Self{
+impl<'a> AABox<'a> {
+    // pub fn new(p0: Vector3<f32>, p1: Vector3<f32>, material: Box<dyn Material>) -> Self{
+    pub fn new(scale: Vector3<f32>, material: &'a Box<dyn Material>) -> Self{
         let p = vec3(0.0, 0.0, 0.0);
         let half_scale = scale / 2.0;
 
@@ -26,48 +26,48 @@ impl AABox {
 
         let mut sides = HittableList::default();
         
-        sides.push(AARect { 
+        sides.push(&AARect { 
             xy0: p.xy() - half_scale.xy(),
             xy1: p.xy() + half_scale.xy(),
             k: p.z + half_scale.z,
-            material: material.clone(),
+            material,
             rect_type: XY
-        });
-        sides.push(FlipFace::new(AARect { 
+        }.boxed());
+        sides.push(&FlipFace::new(&AARect { 
             xy0: p.xy() - half_scale.xy(),
             xy1: p.xy() + half_scale.xy(),
             k: p.z - half_scale.z,
-            material: material.clone(),
+            material,
             rect_type: XY
-        }));
-        sides.push(AARect { 
+        }.boxed()).boxed());
+        sides.push(&AARect { 
             xy0: p.xz() - half_scale.xz(),
             xy1: p.xz() + half_scale.xz(),
             k: p.y + half_scale.y,
-            material: material.clone(),
+            material,
             rect_type: XZ
-        });
-        sides.push(FlipFace::new(AARect { 
+        }.boxed());
+        sides.push(&FlipFace::new(&AARect { 
             xy0: p.xz() - half_scale.xz(),
             xy1: p.xz() + half_scale.xz(),
             k: p.y - half_scale.y,
-            material: material.clone(),
+            material,
             rect_type: XZ
-        }));
-        sides.push(AARect { 
+        }.boxed()).boxed());
+        sides.push(&AARect { 
             xy0: p.yz() - half_scale.yz(),
             xy1: p.yz() + half_scale.yz(),
             k: p.x + half_scale.x,
-            material: material.clone(),
+            material,
             rect_type: YZ
-        });
-        sides.push(FlipFace::new(AARect { 
+        }.boxed());
+        sides.push(&FlipFace::new(&AARect { 
             xy0: p.yz() - half_scale.yz(),
             xy1: p.yz() + half_scale.yz(),
             k: p.x - half_scale.x,
-            material: material.clone(),
+            material,
             rect_type: YZ
-        }));
+        }.boxed()).boxed());
 
         Self {
             box_min,
@@ -77,7 +77,7 @@ impl AABox {
     }
 }
 
-impl Hittable for AABox {
+impl<'a> Hittable for AABox<'a> {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         self.sides.hit(ray, t_min, t_max)
     }

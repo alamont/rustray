@@ -10,18 +10,18 @@ use std::f32;
 
 const EPSILON:f32 = 0.0000001;
 
-pub struct Triangle {
+pub struct Triangle<'a> {
     pub v0: Vector3<f32>,
     pub v1: Vector3<f32>,
     pub v2: Vector3<f32>,
-    pub material: Arc<dyn Material>,
+    pub material: &'a Box<dyn Material>,
     pub n0: Vector3<f32>,
     pub n1: Vector3<f32>,
     pub n2: Vector3<f32>
 }
 
-impl Triangle {
-    pub fn new(v0: Vector3<f32>, v1: Vector3<f32>, v2: Vector3<f32>, material: Arc<dyn Material>) -> Self {
+impl<'a> Triangle<'a> {
+    pub fn new(v0: Vector3<f32>, v1: Vector3<f32>, v2: Vector3<f32>, material: &'a Box<dyn Material>) -> Self {
         let edge1 = v1 - v0;
         let edge2 = v2 - v0;
         let normal = edge1.cross(&edge2);
@@ -37,7 +37,7 @@ impl Triangle {
     }
 }
 
-impl Hittable for Triangle {
+impl<'a> Hittable for Triangle<'a> {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         let edge1 = self.v1 - self.v0;
         let edge2 = self.v2 - self.v0;
@@ -79,7 +79,7 @@ impl Hittable for Triangle {
                 p,
                 normal,
                 ray,
-                Arc::clone(&self.material),
+                &self.material,
                 Vector2::new(u, v)
             ));
         }

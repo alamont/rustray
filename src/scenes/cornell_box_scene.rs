@@ -14,29 +14,29 @@ use crate::scenes::prefabs::cornell_box::{cornell_box, cornell_box_camera, corne
 
 
 pub fn scene() -> Scene {
-    let mut objects: Vec<Arc<dyn Hittable>> = Vec::new();
+    let mut objects: Vec<Box<dyn Hittable>> = Vec::new();
     let (objs, lights) = cornell_box();
     objects.push(objs);
 
-    let white = Arc::new(Lambertian { albedo: Arc::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
-    let aluminium  = Arc::new(Metal { albedo: Arc::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
+    let white = Box::new(Lambertian { albedo: Box::new(ConstantTex { color: vec3(0.73, 0.73, 0.73) })});
+    let aluminium  = Box::new(Metal { albedo: Box::new(ConstantTex { color: vec3(0.8, 0.85, 0.85) } ), fuzz: 0.0});
 
     let box1 = AABox::new(
         vec(165.0, 165.0, 165.0),
-        white.clone()
+        white
     );
     let box2 = AABox::new(
         vec(165.0, 330.0, 165.0),
-        aluminium.clone()
+        aluminium
     );
 
-    objects.push(Arc::new(Transform::new(
+    objects.push(Box::new(Transform::new(
         box1,
         vec3(85.0, 165.0/2.0, 120.0),
         vec3(0.0, -18.0, 0.0)
     )));
 
-    objects.push(Arc::new(Transform::new(
+    objects.push(Box::new(Transform::new(
         box2,
         vec3(-85.0, 165.0, -120.0),
         vec3(0.0, 15.0, 0.0)

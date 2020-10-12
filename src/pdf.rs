@@ -48,12 +48,12 @@ impl Pdf for UniformPdf {
     }
 }
 
-pub struct HittablePdf {
+pub struct HittablePdf<'a> {
     pub origin: Vector3<f32>,
-    pub hittable: Arc<dyn Hittable>,
+    pub hittable: &'a Box<dyn Hittable>,
 }
 
-impl Pdf for HittablePdf {
+impl<'a> Pdf for HittablePdf<'a> {
     fn value(&self, direction: Vector3<f32>) -> f32 {
         self.hittable.pdf_value(&self.origin, &direction)
     }
@@ -63,7 +63,7 @@ impl Pdf for HittablePdf {
 }
 
 pub struct EnvPdf { 
-    pub environment: Arc<dyn EnvironmentMaterial>
+    pub environment: Box<dyn EnvironmentMaterial>
 }
 
 impl Pdf for EnvPdf {
@@ -76,13 +76,13 @@ impl Pdf for EnvPdf {
 }
 
 pub struct MixturePdf {
-    pub pdfs: Vec<Arc<dyn Pdf>>,
+    pub pdfs: Vec<Box<dyn Pdf>>,
     // pub weights: Vec<f32>,
     // pub cum_weights: Vec<f32>
 }
 
 impl MixturePdf {
-    pub fn new_uniform(pdfs: Vec<Arc<dyn Pdf>>) -> Self {
+    pub fn new_uniform(pdfs: Vec<Box<dyn Pdf>>) -> Self {
         // let weights = vec![1.0 / pdfs.len() as f32; pdfs.len()];
         // let acc_init: Vec<f32> = Vec::new();
         // let cum_weights = weights.iter().fold(acc_init, |mut acc, w| {

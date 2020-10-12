@@ -22,14 +22,14 @@ impl Texture for ConstantTex {
 }
 
 impl ConstantTex {
-    pub fn new_arc(color: Vector3<f32>) -> Arc<dyn Texture> {
-        Arc::new(Self { color })
+    pub fn new_arc(color: Vector3<f32>) -> Box<dyn Texture> {
+        Box::new(Self { color })
     }
 }
 
 pub struct CheckerTex {
-    pub odd: Arc<dyn Texture>,
-    pub even: Arc<dyn Texture>,
+    pub odd: Box<dyn Texture>,
+    pub even: Box<dyn Texture>,
     pub scale: f32,
 }
 
@@ -47,8 +47,8 @@ impl Texture for CheckerTex {
 }
 
 pub struct CheckerTexMap {
-    pub odd: Arc<dyn Texture>,
-    pub even: Arc<dyn Texture>,
+    pub odd: Box<dyn Texture>,
+    pub even: Box<dyn Texture>,
     pub scale: f32,
 }
 

@@ -36,7 +36,7 @@ pub fn schlick(cosine: f32, ref_idx: f32) -> f32 {
 pub struct ScatterRecord {
     pub specular_ray: Option<Ray>,
     pub attenuation: Vector3<f32>,
-    pub pdf: Option<Arc<dyn Pdf>>,
+    pub pdf: Option<Box<dyn Pdf>>,
 }
 
 pub trait Material: Sync + Send {
@@ -59,7 +59,7 @@ pub struct EmptyMaterial {}
 impl Material for EmptyMaterial {}
 
 pub struct Lambertian {
-    pub albedo: Arc<dyn Texture>,
+    pub albedo: Box<dyn Texture>,
 }
 
 impl Material for Lambertian {
@@ -72,7 +72,7 @@ impl Material for Lambertian {
         Some(ScatterRecord {
             specular_ray: None,
             attenuation: self.albedo.value(hit.uv, hit.p),
-            pdf: Some(Arc::new(pdf)),
+            pdf: Some(Box::new(pdf)),
         })
     }
     fn scattering_pdf(&self, _ray_in: &Ray, hit: &HitRecord, ray_scatterd: &Ray) -> f32 {
@@ -86,7 +86,7 @@ impl Material for Lambertian {
 }
 
 pub struct Metal {
-    pub albedo: Arc<dyn Texture>,
+    pub albedo: Box<dyn Texture>,
     pub fuzz: f32,
 }
 
@@ -106,7 +106,7 @@ impl Material for Metal {
 pub struct Dielectric {
     pub ref_idx: f32,
     pub color: Vector3<f32>,
-    pub roughness: Arc<dyn Texture>,
+    pub roughness: Box<dyn Texture>,
     pub density: f32,
 }
 
@@ -162,14 +162,14 @@ impl Default for Dielectric {
         Dielectric {
             ref_idx: 1.52,
             color: vec(1.0, 1.0, 1.0),
-            roughness: Arc::new(ConstantTex { color: vec_zero() }),
+            roughness: Box::new(ConstantTex { color: vec_zero() }),
             density: 0.0, //TODO: rename to absorption coefficient or something like that
         }
     }
 }
 
 pub struct DiffuseLight {
-    pub emit: Arc<dyn Texture>,
+    pub emit: Box<dyn Texture>,
 }
 
 impl Material for DiffuseLight {
@@ -187,7 +187,7 @@ impl Material for DiffuseLight {
 }
 
 pub struct Isotropic {
-    pub albedo: Arc<dyn Texture>,
+    pub albedo: Box<dyn Texture>,
 }
 
 impl Material for Isotropic {
@@ -196,7 +196,7 @@ impl Material for Isotropic {
         Some(ScatterRecord {
             specular_ray: None,
             attenuation: self.albedo.value(hit.uv, hit.p),
-            pdf: Some(Arc::new(pdf)),
+            pdf: Some(Box::new(pdf)),
         })
     }
     fn is_solid(&self) -> bool {
@@ -206,8 +206,8 @@ impl Material for Isotropic {
 
 pub struct DielectricSurfaceLambert {
     pub ref_idx: f32,
-    pub albedo: Arc<dyn Texture>,
-    pub roughness: Arc<dyn Texture>,
+    pub albedo: Box<dyn Texture>,
+    pub roughness: Box<dyn Texture>,
 }
 
 impl Material for DielectricSurfaceLambert {
@@ -242,7 +242,7 @@ impl Material for DielectricSurfaceLambert {
                 return Some(ScatterRecord {
                     specular_ray: None,
                     attenuation: self.albedo.value(hit.uv, hit.p),
-                    pdf: Some(Arc::new(pdf)),
+                    pdf: Some(Box::new(pdf)),
                 });
             };
             Ray::new(hit.p, refracted_or_reflected)
@@ -268,8 +268,8 @@ impl Default for DielectricSurfaceLambert {
     fn default() -> DielectricSurfaceLambert {
         DielectricSurfaceLambert {
             ref_idx: 1.52,
-            albedo: Arc::new(ConstantTex { color: vec_one() }),
-            roughness: Arc::new(ConstantTex { color: vec_zero() }),
+            albedo: Box::new(ConstantTex { color: vec_one() }),
+            roughness: Box::new(ConstantTex { color: vec_zero() }),
         }
     }
 }
@@ -305,7 +305,7 @@ impl EnvironmentMaterial for ConstantEnvironment {
 }
 
 pub struct Environment {
-    pub emit_tex: Arc<dyn Texture>,
+    pub emit_tex: Box<dyn Texture>,
     pub pdf: Vec<f32>,
     pub width: f32,
     pub height: f32,
@@ -376,7 +376,7 @@ impl Environment {
         )
         .unwrap();
 
-        let emit_tex = Arc::new(
+        let emit_tex = Box::new(
             ImageTexture::new(env_image_buffer)
                 .sampler(Bilinear)
                 .wrap_mode(Clamp),
@@ -386,7 +386,6 @@ impl Environment {
         let height = emit_tex.height as f32;
 
         let image_vec = emit_tex
-            .clone()
             .image_buffer
             .enumerate_pixels()
             .map(|(_x, y, p)| {

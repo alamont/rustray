@@ -15,15 +15,21 @@ pub enum AARectType {
     YZ,
 }
 
-pub struct AARect {
+pub struct AARect<'a> {
     pub xy0: Vector2<f32>,
     pub xy1: Vector2<f32>,
     pub k: f32,
-    pub material: Arc<dyn Material>,
+    pub material: &'a Box<dyn Material>,
     pub rect_type: AARectType
 }
 
-impl Hittable for AARect {
+impl AARect<'_> {
+    pub fn boxed(self) -> Box<dyn Hittable> {
+        Box::from(self)
+    }
+}
+
+impl<'a> Hittable for AARect<'a> {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         use AARectType::*;
         let t = match &self.rect_type {
@@ -54,7 +60,7 @@ impl Hittable for AARect {
             p,
             outward_normal,
             ray,
-            Arc::clone(&self.material),
+            &self.material,
             uv
         ))
     }
